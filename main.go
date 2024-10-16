@@ -14,6 +14,7 @@ func init() {
 func main() {
 	migrate.Migrate()
 	router := gin.Default()
+	gin.SetMode(gin.DebugMode)
 
 	// Создаем группу маршрутов для API v1
 	apiGroup := router.Group("/api/v1")

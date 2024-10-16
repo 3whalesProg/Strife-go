@@ -11,4 +11,5 @@ func UserRouter(router *gin.RouterGroup) {
 	userController := controllers.NewUserController()
 
 	router.GET("/getUserInfo", userController.GetUserInfo)
+	router.GET("/getUserChats", userController.GetUserChats)
 }

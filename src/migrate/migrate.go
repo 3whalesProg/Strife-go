@@ -8,4 +8,6 @@ import (
 func Migrate() {
 	db.ConnectToDB()
 	db.DB.AutoMigrate(&models.Users{})
+	db.DB.AutoMigrate(&models.Messages{})
+	db.DB.AutoMigrate(&models.Chats{})
 }

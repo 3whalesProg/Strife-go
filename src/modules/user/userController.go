@@ -54,6 +54,38 @@ func (ac *UserController) GetUserInfo(c *gin.Context) {
 	})
 }
 
+func (ac *UserController) GetUserChats(c *gin.Context) {
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
+		return
+	}
+
+	// Убираем "Bearer " из начала токена, если оно есть
+	if len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
+	}
+
+	// Проверяем токен и получаем информацию из Claims
+	claims, err := utils.CheckUser(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Получаем пользователя из базы данных по ID, который хранится в JWT токене
+	var user models.Users
+	if err := db.DB.Preload("Chats").First(&user, claims.ID).Error; err != nil {
+		return
+	}
+
+	// Возвращаем информацию о пользователе
+	c.JSON(http.StatusOK, gin.H{
+		"chats": user,
+	})
+}
+
 func (ac *UserController) RegisterRoutes(router *gin.RouterGroup) {
 	router.POST("/register", ac.GetUserInfo)
+	router.GET("/getUserChats", ac.GetUserChats)
 }

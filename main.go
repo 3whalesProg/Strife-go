@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/3whalesProg/Strife-go/src/db"
 	"github.com/3whalesProg/Strife-go/src/migrate"
-	"github.com/3whalesProg/Strife-go/src/models"
 	"github.com/3whalesProg/Strife-go/src/routes"
 	"github.com/gin-gonic/gin"
 )
@@ -13,7 +12,6 @@ func init() {
 }
 
 func main() {
-	db.DB.Migrator().DropTable(&models.Users{})
 	migrate.Migrate()
 	router := gin.Default()
 

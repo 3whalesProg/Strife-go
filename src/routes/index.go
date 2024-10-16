@@ -10,5 +10,8 @@ func IndexRouter(router *gin.RouterGroup) {
 	authGroup := router.Group("/auth")
 	AuthRouter(authGroup) // Подключаем роуты аутентификации
 
+	userGroup := router.Group("/user")
+	UserRouter(userGroup)
+
 	// Здесь можно добавить другие группы маршрутов для v1
 }

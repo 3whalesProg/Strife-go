@@ -10,10 +10,7 @@ import (
 func AuthRouter(router *gin.RouterGroup) {
 	authController := controllers.NewAuthController()
 
-	router.POST("/login", func(c *gin.Context) {
-		// Логика для входа пользователя
-		c.JSON(200, gin.H{"message": "Login successful"})
-	})
+	router.POST("/login", authController.Login)
 
 	router.POST("/register", authController.Register)
 }

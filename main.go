@@ -5,6 +5,7 @@ import (
 	"github.com/3whalesProg/Strife-go/src/migrate"
 	"github.com/3whalesProg/Strife-go/src/routes"
 	"github.com/3whalesProg/Strife-go/src/socket"
+	"github.com/gin-contrib/cors" // Импортируем пакет cors
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,6 +16,13 @@ func init() {
 func main() {
 	migrate.Migrate()
 	router := gin.Default()
+
+	// Настройка CORS
+	config := cors.DefaultConfig()                                            // Используем стандартную конфигурацию
+	config.AllowOrigins = []string{"*"}                                       // Разрешаем доступ со всех доменов (в реальных приложениях используйте конкретные домены)
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"} // Разрешаем все основные HTTP-методы
+	config.AllowHeaders = []string{"Content-Type", "Authorization"}           // Разрешаем заголовки Content-Type и Authorization
+	router.Use(cors.New(config))                                              // Включаем CORS для всего приложения
 
 	// Создаем группу маршрутов для API v1
 	apiGroup := router.Group("/api/v1")

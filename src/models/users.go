@@ -20,7 +20,7 @@ type Users struct {
 
 // ValidateEmail проверяет, что email имеет правильный формат
 func ValidateEmail(email string) bool {
-	re := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)
+	re := regexp.MustCompile(`(?i)^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)
 	return re.MatchString(email)
 }
 

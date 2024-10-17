@@ -5,6 +5,7 @@ import (
 
 	"github.com/3whalesProg/Strife-go/src/db"
 	"github.com/3whalesProg/Strife-go/src/models"
+	"github.com/3whalesProg/Strife-go/src/socket"
 	"github.com/3whalesProg/Strife-go/src/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -85,7 +86,15 @@ func (ac *UserController) GetUserChats(c *gin.Context) {
 	})
 }
 
+func (ac *UserController) Hello(c *gin.Context) {
+	socket.Hello()
+	c.JSON(http.StatusOK, gin.H{
+		"chats": 111,
+	})
+}
+
 func (ac *UserController) RegisterRoutes(router *gin.RouterGroup) {
 	router.POST("/register", ac.GetUserInfo)
 	router.GET("/getUserChats", ac.GetUserChats)
+	router.GET("/hello", ac.Hello)
 }

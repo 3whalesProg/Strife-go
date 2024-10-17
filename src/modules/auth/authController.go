@@ -21,9 +21,11 @@ func NewAuthController() *AuthController {
 // Register обрабатывает регистрацию пользователя
 func (ac *AuthController) Register(c *gin.Context) {
 	var json struct {
-		Login    string `json:"login" binding:"required"`
-		Email    string `json:"email" binding:"required"`
-		Password string `json:"password" binding:"required"`
+		Login       string `json:"login" binding:"required"`
+		Email       string `json:"email" binding:"required"`
+		Password    string `json:"password" binding:"required"`
+		Description string `json:"description" `
+		Nickname    string `json:"nickname"`
 	}
 
 	// Привязываем JSON к структуре

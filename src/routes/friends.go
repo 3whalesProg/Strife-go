@@ -6,11 +6,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// FriendsRouter Регистрируем маршруты для работы с друзьями
 func FriendsRouter(router *gin.RouterGroup) {
 	friendsController := controllers.NewFriendController()
 
-	router.GET("/friends", friendsController.GetFriendRequests)
-	router.POST("/request", friendsController.SendFriendRequest)
-	router.GET("/requests", friendsController.GetFriendRequests)
-	router.POST("/response", friendsController.RespondToFriendRequest)
+	// Регистрация всех маршрутов, соответствующих методам FriendController
+	router.GET("/friends", friendsController.GetFriendsByUserId)       // Получение списка друзей
+	router.POST("/request", friendsController.SendFriendRequest)       // Отправка запроса в друзья
+	router.GET("/requests", friendsController.GetFriendRequests)       // Получение списка запросов
+	router.POST("/response", friendsController.RespondToFriendRequest) // Ответ на запрос в друзья
+	router.DELETE("/drequest", friendsController.DeleteFriendRequest)  // Удаление запроса в друзья
+	router.DELETE("/dfriend", friendsController.RemoveFriend)          // Удаление друга
 }

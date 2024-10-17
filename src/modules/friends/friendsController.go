@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -17,7 +18,7 @@ func NewFriendController() *FriendController {
 	return &FriendController{}
 }
 
-// протзрваиель по id
+// GetUserByID Поиск по id
 func GetUserByID(id uint) (*models.Users, error) {
 	var user models.Users
 	if err := db.DB.First(&user, id).Error; err != nil {
@@ -26,8 +27,7 @@ func GetUserByID(id uint) (*models.Users, error) {
 	return &user, nil
 }
 
-// todo: сделать поиск по login
-// протзрваиель по логинку
+// GetUserByLogin Поиск по логинку
 func GetUserByLogin(login string) (*models.Users, error) {
 	var user models.Users
 	if err := db.DB.Where("login = ?", login).First(&user).Error; err != nil {
@@ -36,38 +36,110 @@ func GetUserByLogin(login string) (*models.Users, error) {
 	return &user, nil
 }
 
-// добавка в друзья
+// AddFriends Добавление в друзья
 func AddFriends(user *models.Users, friend *models.Users) error {
+	// Проверка на существующую дружбу
+	exists, err := FriendsExist(user.ID, friend.ID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("friendship already exists")
+	}
+
+	// Создаем дружеские связи (двусторонние)
 	friendships := []models.Friends{
 		{UserID: user.ID, FriendID: friend.ID},
 		{UserID: friend.ID, FriendID: user.ID},
 	}
 
-	var wg sync.WaitGroup
-	errs := make(chan error, 2)
+	// Используем транзакцию для сохранения целостности данных
+	return db.DB.Transaction(func(tx *gorm.DB) error {
+		var wg sync.WaitGroup
+		errs := make(chan error, len(friendships))
 
-	for _, friendship := range friendships {
-		wg.Add(1)
-		go func(f models.Friends) {
-			defer wg.Done()
-			if err := db.DB.Create(&f).Error; err != nil {
-				errs <- err
-			}
-		}(friendship)
-	}
-
-	wg.Wait()
-	close(errs)
-
-	for err := range errs {
-		if err != nil {
-			return err
+		for _, friendship := range friendships {
+			wg.Add(1)
+			go func(f models.Friends) {
+				defer wg.Done()
+				if err := tx.Create(&f).Error; err != nil {
+					errs <- err
+				}
+			}(friendship)
 		}
-	}
-	return nil
+
+		wg.Wait()
+		close(errs)
+
+		for err := range errs {
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
-// список друзей по айди юзера
+// DeleteFriendRequest удаляет запрос на дружбу
+func (fc *FriendController) DeleteFriendRequest(c *gin.Context) {
+	var request struct {
+		RecipientID uint `json:"recipient_id"` // ID пользователя, который получил запрос
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	token := c.Request.Header.Get("Authorization")
+	claims, err := utils.CheckUser(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	senderID := claims.ID
+
+	// Удаление запроса на дружбу
+	if err := db.DB.Where("sender_id = ? AND recipient_id = ?", senderID, request.RecipientID).Delete(&models.FriendRequest{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Friend request deleted"})
+}
+
+// RemoveFriend удаляет друга (разрывает связь)
+func (fc *FriendController) RemoveFriend(c *gin.Context) {
+	var request struct {
+		FriendID uint `json:"friend_id"` // ID друга для удаления
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	token := c.Request.Header.Get("Authorization")
+	claims, err := utils.CheckUser(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	userID := claims.ID
+
+	// Удаление обеих записей дружбы (двусторонняя связь)
+	if err := db.DB.Where("(user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)",
+		userID, request.FriendID, request.FriendID, userID).Delete(&models.Friends{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Friend removed"})
+}
+
+// GetFriendsByUserId список друзей по айди юзера
 func (fc *FriendController) GetFriendsByUserId(c *gin.Context) {
 	token := c.Request.Header.Get("Authorization")
 	claims, err := utils.CheckUser(token)
@@ -102,7 +174,7 @@ func (fc *FriendController) GetFriendsByUserId(c *gin.Context) {
 	c.JSON(http.StatusOK, friendList)
 }
 
-// запрос в добавку в др
+// SendFriendRequest запрос в добавку в др
 func (fc *FriendController) SendFriendRequest(c *gin.Context) {
 	var request struct {
 		RecipientLogin string `json:"recipient_login"`
@@ -155,7 +227,7 @@ func (fc *FriendController) SendFriendRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Friend request sent"})
 }
 
-// список запросов на дружбу
+// GetFriendRequests список запросов на дружбу
 func (fc *FriendController) GetFriendRequests(c *gin.Context) {
 	token := c.Request.Header.Get("Authorization")
 	claims, err := utils.CheckUser(token)
@@ -227,10 +299,22 @@ func (fc *FriendController) RespondToFriendRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Response processed"})
 }
 
-// ручки и их рега
+func FriendsExist(userID, friendID uint) (bool, error) {
+	var friend models.Friends
+	err := db.DB.Where("(user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)",
+		userID, friendID, friendID, userID).First(&friend).Error
+	if err == gorm.ErrRecordNotFound {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// RegisterRoutes Регистрируем новые пути в маршрутизаторе
 func (fc *FriendController) RegisterRoutes(router *gin.RouterGroup) {
-	router.GET("/all", fc.GetFriendsByUserId)
+	router.GET("/friends", fc.GetFriendsByUserId)
 	router.POST("/request", fc.SendFriendRequest)
 	router.GET("/reqlis", fc.GetFriendRequests)
 	router.POST("/response", fc.RespondToFriendRequest)
+	router.DELETE("/drequest", fc.DeleteFriendRequest) // Удаление запроса
+	router.DELETE("/dfriend", fc.RemoveFriend)         // Удаление друга
 }

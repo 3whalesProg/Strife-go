@@ -52,7 +52,6 @@ func (ac *UserController) GetUserInfo(c *gin.Context) {
 		"role":     user.Role,
 	})
 }
-
 func (ac *UserController) CName(c *gin.Context) {
 	var json struct {
 		Nickname string `json:"nickname" binding:"required"`
@@ -63,6 +62,9 @@ func (ac *UserController) CName(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
+
+func (ac *UserController) GetUserChats(c *gin.Context) {
+
 
 	token := c.GetHeader("Authorization")
 	if token == "" {
@@ -84,6 +86,26 @@ func (ac *UserController) CName(c *gin.Context) {
 
 	// Получаем пользователя из базы данных по ID, который хранится в JWT токене
 	var user models.Users
+	if err := db.DB.Preload("Chats").First(&user, claims.ID).Error; err != nil {
+		return
+	}
+
+	// Возвращаем информацию о пользователе
+	c.JSON(http.StatusOK, gin.H{
+		"chats": user,
+	})
+}
+
+func (ac *UserController) Hello(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"chats": 111,
+	})
+}
+
+func (ac *UserController) RegisterRoutes(router *gin.RouterGroup) {
+	router.POST("/register", ac.GetUserInfo)
+	router.GET("/getUserChats", ac.GetUserChats)
+	router.GET("/hello", ac.Hello)
 	if err := db.DB.First(&user, claims.ID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return

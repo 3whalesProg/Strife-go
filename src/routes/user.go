@@ -11,6 +11,8 @@ func UserRouter(router *gin.RouterGroup) {
 	userController := controllers.NewUserController()
 
 	router.GET("/getUserInfo", userController.GetUserInfo)
+	router.GET("/getUserChats", userController.GetUserChats)
+	router.GET("/hello", userController.Hello)
 	router.PATCH("/cname", userController.CName)
 	router.PATCH("/description", userController.UpdateDescription)
 }

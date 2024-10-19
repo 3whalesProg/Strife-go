@@ -78,6 +78,74 @@ func (ac *ChatController) CreateChat(c *gin.Context) {
 	})
 }
 
+func (ac *ChatController) GetCurrentChat(c *gin.Context) {
+	var json struct {
+		UserID uint `json:"user_ids" binding:"required"` // Список ID пользователей
+	}
+
+	// Привязываем JSON к структуре
+	if err := c.ShouldBindJSON(&json); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
+		return
+	}
+
+	// Убираем "Bearer " из начала токена, если оно есть
+	if len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
+	}
+
+	// Проверяем токен и получаем информацию из Claims
+	claims, err := utils.CheckUser(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+	var chats []models.Chats
+
+	// Сначала находим все чаты текущего пользователя
+	if err := db.DB.
+		Joins("JOIN user_chats ON user_chats.chat_id = chats.id").
+		Where("user_chats.user_id = ?", claims.ID).
+		Find(&chats).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user chats"})
+		return
+	}
+
+	// Ищем среди чатов пользователя нужный, где is_tet_a_tet = true и recipient_id = переданному
+	var targetChat *models.Chats
+	for _, chat := range chats {
+		if chat.IsTetATet && chat.RecipientID == json.UserID {
+			targetChat = &chat
+			break
+		}
+	}
+	if targetChat == nil {
+		newChat := models.Chats{
+			Users: []*models.Users{ // Срез указателей на Users
+				{ID: claims.ID}, // Указатель на текущего пользователя
+			},
+			Title:       "Tet-a-tet chat", // Можно передать любое значение для названия
+			IsTetATet:   true,             // Чат "тет-а-тет"
+			RecipientID: json.UserID,      // Привязываем получателя
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "Chat created successfully",
+			"chat_id":      newChat.ID,
+			"recipient_id": newChat.RecipientID,
+			"is_tet_a_tet": newChat.IsTetATet})
+	}
+
+	// Возвращаем найденный чат
+	c.JSON(http.StatusOK, gin.H{"message": "Chat created successfully",
+		"chat_id":      targetChat.ID,
+		"recipient_id": targetChat.RecipientID,
+		"is_tet_a_tet": targetChat.IsTetATet})
+}
+
 func (ac *ChatController) AddUserToChat(c *gin.Context) {
 	var json struct {
 		ChatID uint `json:"chat_id" binding:"required"` // ID чата
@@ -245,5 +313,6 @@ func (ac *ChatController) RegisterRoutes(router *gin.RouterGroup) {
 	router.POST("/addUserToChat", ac.AddUserToChat)
 	router.POST("/sendMessage", ac.AddUserToChat)
 	router.POST("/getChatMessages", ac.GetChatMessages)
+	router.POST("/getCurrentChat", ac.GetCurrentChat)
 	router.GET("/getUserChats", ac.GetUserChats)
 }

@@ -14,5 +14,6 @@ func ChatRouter(router *gin.RouterGroup) {
 	router.POST("/addUserToChat", chatController.AddUserToChat)
 	router.POST("/sendMessage", chatController.SendMessage)
 	router.POST("/getChatMessages", chatController.GetChatMessages)
+	router.POST("/getCurrentChat", chatController.GetCurrentChat)
 	router.GET("/getUserChats", chatController.GetUserChats)
 }

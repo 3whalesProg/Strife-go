@@ -114,6 +114,7 @@ type UserResponse struct {
 	Nickname    string `json:"nickname"`
 	Description string `json:"description"`
 	AvatarURL   string `json:"avatar_url"`
+	IsFavorite  bool   `json:"is_favorite"` // Поле для обозначения избранного
 }
 
 // GetFriendsByUserId список друзей по ID пользователя без роли и пароля
@@ -127,32 +128,34 @@ func (fc *FriendController) GetFriendsByUserId(c *gin.Context) {
 
 	userId := claims.ID
 
+	// Получаем список друзей
 	var friends []models.Friends
 	if err := db.DB.Where("user_id = ?", userId).Find(&friends).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	friendList := make([]UserResponse, len(friends)) // Изменили тип на UserResponse
+	// Создаем список друзей с необходимыми данными
+	friendList := make([]UserResponse, 0, len(friends))
 	var wg sync.WaitGroup
 
-	for i, friend := range friends {
+	for _, friend := range friends {
 		wg.Add(1)
-		go func(i int, friendID uint) {
+		go func(friend models.Friends) {
 			defer wg.Done()
-			user, err := GetUserByID(friendID)
-			if err == nil {
-				// Заполняем структуру UserResponse без Role и Password
-				friendList[i] = UserResponse{
+			var user models.Users
+			if err := db.DB.First(&user, friend.FriendID).Error; err == nil {
+				friendList = append(friendList, UserResponse{
 					ID:          user.ID,
 					Login:       user.Login,
 					Email:       user.Email,
 					Nickname:    user.Nickname,
 					Description: user.Description,
 					AvatarURL:   user.AvatarURL,
-				}
+					IsFavorite:  friend.IsFavorite, // Добавляем поле is_favorite
+				})
 			}
-		}(i, friend.FriendID)
+		}(friend)
 	}
 
 	wg.Wait()

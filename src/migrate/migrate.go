@@ -10,4 +10,6 @@ func Migrate() {
 	db.DB.AutoMigrate(&models.Users{})
 	db.DB.AutoMigrate(&models.Messages{})
 	db.DB.AutoMigrate(&models.Chats{})
+	db.DB.AutoMigrate(&models.Friends{})
+	db.DB.AutoMigrate(&models.FriendRequest{})
 }

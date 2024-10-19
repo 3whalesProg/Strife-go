@@ -16,6 +16,7 @@ func init() {
 func main() {
 	migrate.Migrate()
 	router := gin.Default()
+	gin.SetMode(gin.DebugMode)
 
 	// Настройка CORS
 	config := cors.DefaultConfig()                                            // Используем стандартную конфигурацию

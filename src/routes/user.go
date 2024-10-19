@@ -13,4 +13,6 @@ func UserRouter(router *gin.RouterGroup) {
 	router.GET("/getUserInfo", userController.GetUserInfo)
 	router.GET("/getUserChats", userController.GetUserChats)
 	router.GET("/hello", userController.Hello)
+	router.PATCH("/cname", userController.CName)
+	router.PATCH("/description", userController.UpdateDescription)
 }

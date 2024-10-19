@@ -123,7 +123,7 @@ func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 		}
 	}
 
-	UserIDs := []uint{claims.ID, json.UserID} // Используем ID текущего пользователя и получателя
+	UserIDs := []uint{claims.ID} // Используем ID текущего пользователя и получателя
 	var users []models.Users
 	if err := db.DB.Where("id IN ?", UserIDs).Find(&users).Error; err != nil || len(users) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Some users not found"})

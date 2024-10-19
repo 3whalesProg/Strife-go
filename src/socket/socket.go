@@ -10,10 +10,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var activeClients = make(map[uint]*websocket.Conn) // Ключ - ID пользователя, значение - соединение
-var mu sync.Mutex                                  // Для защиты активных клиентов
-type ActiveChat struct {
+// Ключ - ID пользователя, значение - соединение
+var mu sync.Mutex // Для защиты активных клиентов
+type ActiveChats struct {
 	UserID uint // ID пользователя
+}
+type ActiveClient struct {
+	UserID uint
+	Conn   *websocket.Conn
 }
 
 type Claims struct {
@@ -21,7 +25,10 @@ type Claims struct {
 	// Другие поля токена...
 }
 
+var activeClients = make(map[uint]*websocket.Conn)
 var activeChats = make(map[uint][]uint)
+
+var fff = 1
 
 // Обновление для Gorilla WebSocket
 var upgrader = websocket.Upgrader{

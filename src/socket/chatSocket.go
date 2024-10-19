@@ -6,6 +6,7 @@ import (
 
 	"github.com/3whalesProg/Strife-go/src/db"
 	"github.com/3whalesProg/Strife-go/src/models"
+	"github.com/gin-gonic/gin"
 )
 
 func unsubscribeChatsNotifications(userID uint) {
@@ -56,4 +57,27 @@ func subscribeChatNotifications(userID uint) error {
 
 	fmt.Println(activeChats)
 	return nil
+}
+
+func SendMessageToChat(chatID uint, message models.Messages) {
+
+	if userIDs, ok := activeChats[chatID]; ok {
+		fmt.Println(activeChats[chatID])
+		for _, userID := range userIDs {
+			if client, exists := activeClients[userID]; exists {
+				err := client.WriteJSON(gin.H{
+					"message_id": message.ID,
+					"content":    message.Content,
+					"chat_id":    chatID,
+					"sender_id":  message.SenderID,
+					"created_at": message.CreatedAt,
+				})
+				if err != nil {
+					log.Printf("Ошибка отправки сообщения пользователю %d: %v", userID, err)
+				}
+			}
+		}
+	} else {
+		log.Printf("Нет подписанных пользователей для чата с ID %d", chatID)
+	}
 }

@@ -8,19 +8,22 @@ import (
 
 type Users struct {
 	gorm.Model
-	ID          uint   `gorm:"primaryKey;autoIncrement"` // ID будет Primary Key с автоинкрементом
-	Login       string `gorm:"unique;size:20;not null"`  // Логин, уникальный и обязательный (varchar(256))
-	Email       string `gorm:"unique;size:256;not null"` // Email, уникальный и обязательный (varchar(256))
-	Nickname    string `gorm:"size:20"`                  // Никнейм (varchar(20))
-	Password    string `gorm:"not null"`                 // Пароль, обязательный (text)
-	Description string `gorm:"size:256"`
-	Role        string `gorm:"size:20;default:'user'"`
+	ID       uint       `gorm:"primaryKey;autoIncrement"` // ID будет Primary Key с автоинкрементом
+	Login    string     `gorm:"unique;size:256;not null"` // Логин, уникальный и обязательный (varchar(256))
+	Email    string     `gorm:"unique;size:256;not null"` // Email, уникальный и обязательный (varchar(256))
+	Nickname string     `gorm:"size:256"`                 // Никнейм (varchar(256))
+	Password string     `gorm:"not null"`  
+  Description string `gorm:"size:256"`  // Пароль, обязательный (text)
+	Role     string     `gorm:"size:50;default:'user'"`
+	Chats    []*Chats   `gorm:"many2many:user_chats;"`
+	Messages []Messages `gorm:"foreignKey:SenderID"`
+                // Пароль, обязательный (text)
 	// Включает стандартные поля: CreatedAt, UpdatedAt, DeletedAt
 }
 
 // ValidateEmail проверяет, что email имеет правильный формат
 func ValidateEmail(email string) bool {
-	re := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)
+	re := regexp.MustCompile(`(?i)^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)
 	return re.MatchString(email)
 }
 

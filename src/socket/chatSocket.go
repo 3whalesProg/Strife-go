@@ -66,11 +66,11 @@ func SendMessageToChat(chatID uint, message models.Messages) {
 		for _, userID := range userIDs {
 			if client, exists := activeClients[userID]; exists {
 				err := client.WriteJSON(gin.H{
-					"message_id": message.ID,
-					"content":    message.Content,
-					"chat_id":    chatID,
-					"sender_id":  message.SenderID,
-					"created_at": message.CreatedAt,
+					"Cessage_id": message.ID,
+					"Content":    message.Content,
+					"Chat_id":    chatID,
+					"Sender_id":  message.SenderID,
+					"Created_at": message.CreatedAt,
 				})
 				if err != nil {
 					log.Printf("Ошибка отправки сообщения пользователю %d: %v", userID, err)

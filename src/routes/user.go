@@ -15,6 +15,6 @@ func UserRouter(router *gin.RouterGroup) {
 	router.GET("/hello", userController.Hello)
 	router.PATCH("/cname", userController.CName)
 	router.PATCH("/description", userController.UpdateDescription)
-	router.POST("/getUserByLogin", userController.GetUserByIDController)
-	router.POST("/getUserById", userController.GetUserByLoginController)
+	router.POST("/getUserByLogin", userController.GetUserByLoginController)
+	router.POST("/getUserById", userController.GetUserByIDController)
 }

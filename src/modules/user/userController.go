@@ -113,10 +113,12 @@ func (uc *UserController) GetUserByLoginController(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User found",
 		"user": gin.H{
-			"id":       user.ID,
-			"login":    user.Login,
-			"email":    user.Email,
-			"nickname": user.Nickname,
+			"id":         user.ID,
+			"login":      user.Login,
+			"email":      user.Email,
+			"nickname":   user.Nickname,
+			"avatar_url": user.AvatarURL,
+			"desc":       user.Description,
 		},
 	})
 }
@@ -151,10 +153,12 @@ func (uc *UserController) GetUserByIDController(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User found",
 		"user": gin.H{
-			"id":       user.ID,
-			"login":    user.Login,
-			"email":    user.Email,
-			"nickname": user.Nickname,
+			"id":         user.ID,
+			"login":      user.Login,
+			"email":      user.Email,
+			"nickname":   user.Nickname,
+			"avatar_url": user.AvatarURL,
+			"desc":       user.Description,
 		},
 	})
 }
@@ -349,7 +353,7 @@ func isValidURL(url string) bool {
 func (uc *UserController) RegisterRoutes(router *gin.RouterGroup) {
 	router.GET("/user", uc.GetUserInfo)
 	router.POST("/getUserByLogin", uc.GetUserByLoginController)
-	router.POST("/getUserById", uc.GetUserByLoginController)
+	router.POST("/getUserById", uc.GetUserByIDController)
 	router.PATCH("/cname", uc.CName)
 	router.PATCH("/description", uc.UpdateDescription) // Сосем член по кд у гпт
 	router.PATCH("/avatar", uc.UpdateAvatar)

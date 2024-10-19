@@ -4,14 +4,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// Friends модель для хранения информации о дружбе
 type Friends struct {
 	gorm.Model
-	//id
-	ID uint `gorm:"primaryKey;autoIncrement"`
-	// id ключи к userу и другу
-	UserID   uint `gorm:"not null"`
-	FriendID uint `gorm:"not null"`
-
-	User   Users `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	Friend Users `gorm:"foreignKey:FriendID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	UserID     uint `gorm:"not null"`      // ID пользователя
+	FriendID   uint `gorm:"not null"`      // ID друга
+	IsFavorite bool `gorm:"default:false"` // Поле для отметки избранных друзей
 }

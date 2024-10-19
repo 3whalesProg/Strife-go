@@ -16,4 +16,6 @@ func FriendsRouter(router *gin.RouterGroup) {
 	router.GET("/reqlis", friendsController.GetFriendRequests)         // Получение списка запросов
 	router.POST("/response", friendsController.RespondToFriendRequest) // Ответ на запрос в друзья
 	router.DELETE("/dfriend", friendsController.RemoveFriend)          // Удаление друга
+	router.POST("/favorites/add", friendsController.AddToFavorites)    // Добавление в избранные
+	router.GET("/favorites", friendsController.GetFavoriteFriends)
 }

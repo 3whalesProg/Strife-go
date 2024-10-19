@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"regexp"
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"github.com/3whalesProg/Strife-go/src/db"
 	"github.com/3whalesProg/Strife-go/src/models"
@@ -80,6 +80,82 @@ func (uc *UserController) GetUserInfo(c *gin.Context) {
 		"email":    user.Email,
 		"nickname": user.Nickname,
 		"role":     user.Role,
+	})
+}
+
+func (uc *UserController) GetUserByLoginController(c *gin.Context) {
+	// Структура для принятия JSON запроса
+	var request struct {
+		Login string `json:"login"` // Получаем логин пользователя
+	}
+
+	// Проверяем правильность JSON
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	// Проверяем, передан ли логин
+	if request.Login == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Login is required"})
+		return
+	}
+
+	// Ищем пользователя по логину
+	var user models.Users
+	if err := db.DB.Where("login = ?", request.Login).First(&user).Error; err != nil {
+		// Если пользователь не найден, возвращаем ошибку
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Возвращаем успешный ответ с информацией о пользователе
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User found",
+		"user": gin.H{
+			"id":       user.ID,
+			"login":    user.Login,
+			"email":    user.Email,
+			"nickname": user.Nickname,
+		},
+	})
+}
+
+func (uc *UserController) GetUserByIDController(c *gin.Context) {
+	// Структура для принятия JSON запроса
+	var request struct {
+		ID uint `json:"id"` // Получаем ID пользователя
+	}
+
+	// Проверяем правильность JSON
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	// Проверяем, передан ли ID
+	if request.ID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		return
+	}
+
+	// Ищем пользователя по ID
+	var user models.Users
+	if err := db.DB.Where("id = ?", request.ID).First(&user).Error; err != nil {
+		// Если пользователь не найден, возвращаем ошибку
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Возвращаем успешный ответ с информацией о пользователе
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User found",
+		"user": gin.H{
+			"id":       user.ID,
+			"login":    user.Login,
+			"email":    user.Email,
+			"nickname": user.Nickname,
+		},
 	})
 }
 
@@ -272,6 +348,8 @@ func isValidURL(url string) bool {
 // RegisterRoutes регистрирует маршруты контроллера
 func (uc *UserController) RegisterRoutes(router *gin.RouterGroup) {
 	router.GET("/user", uc.GetUserInfo)
+	router.POST("/getUserByLogin", uc.GetUserByLoginController)
+	router.POST("/getUserById", uc.GetUserByLoginController)
 	router.PATCH("/cname", uc.CName)
 	router.PATCH("/description", uc.UpdateDescription) // Сосем член по кд у гпт
 	router.PATCH("/avatar", uc.UpdateAvatar)

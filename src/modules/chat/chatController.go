@@ -135,6 +135,13 @@ func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 		userPointers = append(userPointers, &users[i])
 	}
 
+	var recipient models.Users
+	if err := db.DB.Where("id = ?", json.UserID).First(&recipient).Error; err != nil {
+		// Если пользователь не найден, возвращаем ошибку
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
 	if targetChat == nil {
 		newChat := models.Chats{
 			Users:       userPointers,
@@ -148,13 +155,13 @@ func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create chat"})
 			return
 		}
-
 		// Возвращаем информацию о созданном чате
 		c.JSON(http.StatusOK, gin.H{
 			"message":      "Chat created successfully",
 			"chat_id":      newChat.ID,
 			"recipient_id": newChat.RecipientID,
 			"is_tet_a_tet": newChat.IsTetATet,
+			"recipient":    recipient,
 		})
 		return
 	}
@@ -165,6 +172,7 @@ func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 		"chat_id":      targetChat.ID,
 		"recipient_id": targetChat.RecipientID,
 		"is_tet_a_tet": targetChat.IsTetATet,
+		"recipient":    recipient,
 	})
 }
 

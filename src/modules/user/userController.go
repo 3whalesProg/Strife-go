@@ -82,14 +82,15 @@ func (uc *UserController) GetUserInfo(c *gin.Context) {
 	})
 }
 
-// CName обновляет никнейм пользователя
-func (uc *UserController) CName(c *gin.Context) {
+func (ac *UserController) CName(c *gin.Context) {
 	var json struct {
 		Nickname string `json:"nickname" binding:"required"`
 	}
-
 	if err := c.ShouldBindJSON(&json); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ввод"})
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
 		return
 	}
 
@@ -98,6 +99,14 @@ func (uc *UserController) CName(c *gin.Context) {
 		return // Ошибка уже обработана в handleUserInfo
 	}
 
+
+	var user models.Users
+	if err := db.DB.First(&user, claims.ID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Проверяем, не совпадает ли новый ник с текущим
 	if user.Nickname == json.Nickname {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Новый никнейм должен отличаться от текущего"})
 		return
@@ -115,6 +124,50 @@ func (uc *UserController) CName(c *gin.Context) {
 		"email":    user.Email,
 		"nickname": user.Nickname,
 		"role":     user.Role,
+	})
+
+	// Привязываем данные из JSON к структуре
+	if err := c.ShouldBindJSON(&json); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+}
+
+func (ac *UserController) GetUserChats(c *gin.Context) {
+
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
+		return
+	}
+
+	// Убираем "Bearer " из начала токена, если оно есть
+	if len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
+	}
+
+	// Проверяем токен и получаем информацию из Claims
+	claims, err := utils.CheckUser(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Получаем пользователя из базы данных по ID, который хранится в JWT токене
+	var user models.Users
+	if err := db.DB.Preload("Chats").First(&user, claims.ID).Error; err != nil {
+		return
+	}
+
+	// Возвращаем информацию о пользователе
+	c.JSON(http.StatusOK, gin.H{
+		"chats": user,
+	})
+}
+
+func (ac *UserController) Hello(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"chats": 111,
 	})
 }
 

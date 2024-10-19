@@ -3,6 +3,10 @@ package utils
 import (
 	"errors"
 	"strings"
+	"fmt"
+	"log"
+	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -58,4 +62,35 @@ func GenerateJWT(id uint, email string, role string) (string, error) {
 		return "", err
 	}
 	return tokenString, nil
+}
+
+func ExtractTokenAndVerify(r *http.Request) (*Claims, error) {
+	// Получаем строку запроса
+	rawQuery := r.URL.RawQuery
+	log.Println("RawQuery:", rawQuery)
+
+	// Разбираем строку запроса и получаем токен
+	values, err := url.ParseQuery(rawQuery)
+	if err != nil {
+		log.Println("Ошибка разбора URL:", err)
+		return nil, err
+	}
+
+	// Получаем токен из параметра "token"
+	token := values.Get("token")
+	if token == "" {
+		log.Println("Токен не найден в запросе.")
+		return nil, fmt.Errorf("токен не найден")
+	}
+
+	log.Println("Токен:", token)
+
+	// Проверяем токен и получаем информацию из Claims
+	claims, err := CheckUser(token) // Предполагается, что у вас уже есть функция CheckUser для проверки токена
+	if err != nil {
+		log.Println("Ошибка проверки токена:", err)
+		return nil, err
+	}
+
+	return claims, nil
 }

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/3whalesProg/Strife-go/src/db"
@@ -9,42 +10,69 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthController содержит методы для аутентификации
+// UserController содержит методы для управления пользователями
 type UserController struct{}
 
-// NewAuthController создает новый экземпляр AuthController
+var userCache = make(map[uint]models.Users) // используем uint для ключей
+
+// NewUserController создает новый экземпляр UserController
 func NewUserController() *UserController {
 	return &UserController{}
 }
 
-// Register обрабатывает регистрацию пользователя
-func (ac *UserController) GetUserInfo(c *gin.Context) {
+// getToken извлекает токен из заголовка Authorization
+func getToken(c *gin.Context) (string, error) {
 	token := c.GetHeader("Authorization")
 	if token == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
-		return
+		return "", fmt.Errorf("токен не предоставлен")
 	}
-
-	// Убираем "Bearer " из начала токена, если оно есть
 	if len(token) > 7 && token[:7] == "Bearer " {
-		token = token[7:]
+		return token[7:], nil
+	}
+	return token, nil
+}
+
+// getUserByClaims получает пользователя по Claims
+func (uc *UserController) getUserByClaims(claims *utils.Claims) (models.Users, error) {
+	// Проверяем кэш
+	if user, found := userCache[claims.ID]; found {
+		return user, nil // Возвращаем пользователя из кэша
 	}
 
-	// Проверяем токен и получаем информацию из Claims
+	var user models.Users
+	if err := db.DB.First(&user, claims.ID).Error; err != nil {
+		return user, err
+	}
+
+	// Сохраняем пользователя в кэш
+	userCache[claims.ID] = user
+	return user, nil
+}
+
+// handleUserInfo обрабатывает общий код для получения информации о пользователе
+func (uc *UserController) handleUserInfo(c *gin.Context) (models.Users, error) {
+	token, err := getToken(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return models.Users{}, err
+	}
+
 	claims, err := utils.CheckUser(token)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
+		return models.Users{}, err
 	}
 
-	// Получаем пользователя из базы данных по ID, который хранится в JWT токене
-	var user models.Users
-	if err := db.DB.First(&user, claims.ID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
+	return uc.getUserByClaims(claims)
+}
+
+// GetUserInfo обрабатывает запрос на получение информации о пользователе
+func (uc *UserController) GetUserInfo(c *gin.Context) {
+	user, err := uc.handleUserInfo(c)
+	if err != nil {
+		return // Ошибка уже обработана в handleUserInfo
 	}
 
-	// Возвращаем информацию о пользователе
 	c.JSON(http.StatusOK, gin.H{
 		"id":       user.ID,
 		"login":    user.Login,
@@ -53,28 +81,24 @@ func (ac *UserController) GetUserInfo(c *gin.Context) {
 		"role":     user.Role,
 	})
 }
+
 func (ac *UserController) CName(c *gin.Context) {
 	var json struct {
 		Nickname string `json:"nickname" binding:"required"`
 	}
-
+	if err := c.ShouldBindJSON(&json); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ввод"})
 	token := c.GetHeader("Authorization")
 	if token == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
 		return
 	}
 
-	// Убираем "Bearer " из начала токена, если оно есть
-	if len(token) > 7 && token[:7] == "Bearer " {
-		token = token[7:]
+	user, err := uc.handleUserInfo(c)
+	if err != nil {
+		return // Ошибка уже обработана в handleUserInfo
 	}
 
-	// Проверяем токен и получаем информацию из Claims
-	claims, err := utils.CheckUser(token)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
 
 	var user models.Users
 	if err := db.DB.First(&user, claims.ID).Error; err != nil {
@@ -84,18 +108,16 @@ func (ac *UserController) CName(c *gin.Context) {
 
 	// Проверяем, не совпадает ли новый ник с текущим
 	if user.Nickname == json.Nickname {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "New nickname must be different from the current one"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Новый никнейм должен отличаться от текущего"})
 		return
 	}
 
-	// Обновляем поле Nickname в базе данных
 	user.Nickname = json.Nickname
 	if err := db.DB.Save(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update nickname"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось обновить никнейм"})
 		return
 	}
 
-	// Возвращаем информацию о пользователе с обновленным ником
 	c.JSON(http.StatusOK, gin.H{
 		"id":       user.ID,
 		"login":    user.Login,
@@ -155,45 +177,22 @@ func (uc *UserController) UpdateDescription(c *gin.Context) {
 		Description string `json:"description" binding:"required"`
 	}
 
-	// Привязываем данные из JSON к структуре
 	if err := c.ShouldBindJSON(&json); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ввод"})
 		return
 	}
 
-	token := c.GetHeader("Authorization")
-	if token == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
-		return
-	}
-
-	// Убираем "Bearer " из начала токена, если оно есть
-	if len(token) > 7 && token[:7] == "Bearer " {
-		token = token[7:]
-	}
-
-	// Проверяем токен и получаем информацию из Claims
-	claims, err := utils.CheckUser(token)
+	user, err := uc.handleUserInfo(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
+		return // Ошибка уже обработана в handleUserInfo
 	}
 
-	// Получаем пользователя из базы данных по ID, который хранится в JWT токене
-	var user models.Users
-	if err := db.DB.First(&user, claims.ID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
-	// Обновляем поле Description в базе данных
 	user.Description = json.Description
 	if err := db.DB.Save(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update description"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось обновить описание"})
 		return
 	}
 
-	// Возвращаем информацию о пользователе с обновленным описанием
 	c.JSON(http.StatusOK, gin.H{
 		"id":          user.ID,
 		"login":       user.Login,
@@ -206,7 +205,7 @@ func (uc *UserController) UpdateDescription(c *gin.Context) {
 
 // RegisterRoutes регистрирует маршруты контроллера
 func (uc *UserController) RegisterRoutes(router *gin.RouterGroup) {
-	router.POST("/register", uc.GetUserInfo)
+	router.GET("/user", uc.GetUserInfo)
 	router.PATCH("/cname", uc.CName)
-	router.PATCH("/description", uc.UpdateDescription) // Добавляем маршрут для обновления описания
+	router.PATCH("/description", uc.UpdateDescription)
 }

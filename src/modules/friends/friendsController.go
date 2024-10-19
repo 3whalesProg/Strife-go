@@ -313,20 +313,20 @@ func (fc *FriendController) RespondToFriendRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Response processed"})
 }
 
-// AddToFavorites добавляет друга в избранные по логину или ID
-func (fc *FriendController) AddToFavorites(c *gin.Context) {
+// ToggleFavoriteFriend переключает статус избранного друга
+func (fc *FriendController) ToggleFavoriteFriend(c *gin.Context) {
 	var request struct {
-		FriendID    *uint  `json:"friend_id,omitempty"`    // ID друга, если указано
-		FriendLogin string `json:"friend_login,omitempty"` // Логин друга, если указано
+		FriendLogin string `json:"friend_login"` // Логин друга
+		FriendID    uint   `json:"friend_id"`    // ID друга
 	}
 
-	// Парсинг JSON-запроса
+	// Парсинг запроса
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
 
-	// Получаем токен пользователя
+	// Получение пользователя из JWT токена
 	token := c.Request.Header.Get("Authorization")
 	claims, err := utils.CheckUser(token)
 	if err != nil {
@@ -335,44 +335,52 @@ func (fc *FriendController) AddToFavorites(c *gin.Context) {
 	}
 	userID := claims.ID
 
-	var friend *models.Users
-
-	// Поиск друга по логину или ID
-	if request.FriendID != nil {
+	var friend models.Users
+	// Проверка по ID или логину
+	if request.FriendID != 0 {
 		// Поиск друга по ID
-		friend, err = GetUserByID(*request.FriendID)
+		friendPtr, err := GetUserByID(request.FriendID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Friend not found by ID"})
 			return
 		}
+		friend = *friendPtr // Разыменовываем указатель на структуру
 	} else if request.FriendLogin != "" {
 		// Поиск друга по логину
-		friend, err = GetUserByLogin(request.FriendLogin)
+		friendPtr, err := GetUserByLogin(request.FriendLogin)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Friend not found by login"})
 			return
 		}
+		friend = *friendPtr // Разыменовываем указатель на структуру
 	} else {
-		// Если не указаны ни ID, ни логин
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Friend ID or login must be provided"})
 		return
 	}
 
-	// Проверяем существование дружбы между пользователем и найденным другом
+	// Проверка существования дружбы
 	var friendship models.Friends
 	if err := db.DB.Where("user_id = ? AND friend_id = ?", userID, friend.ID).First(&friendship).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Friendship not found"})
 		return
 	}
 
-	// Обновляем поле IsFavorite
-	friendship.IsFavorite = true
+	// Переключение is_favorite
+	friendship.IsFavorite = !friendship.IsFavorite
+
+	// Сохранение изменений
 	if err := db.DB.Save(&friendship).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add to favorites"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Friend added to favorites"})
+	// Успешный ответ с новым статусом
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "Favorite status updated",
+		"is_favorite":  friendship.IsFavorite,
+		"friend_login": friend.Login,
+		"friend_id":    friend.ID,
+	})
 }
 
 // GetFavoriteFriends возвращает список избранных друзей в формате UserResponse
@@ -438,6 +446,6 @@ func (fc *FriendController) RegisterRoutes(router *gin.RouterGroup) {
 	router.POST("/request", fc.SendFriendRequest)
 	router.GET("/reqlis", fc.GetFriendRequests)
 	router.POST("/response", fc.RespondToFriendRequest)
-	router.POST("/favorites/add", fc.AddToFavorites) // Добавление в избранные
-	router.GET("/favorites", fc.GetFavoriteFriends)  // Получение списка избранных
+	router.POST("/favorites/toggle", fc.ToggleFavoriteFriend) // Добавление в избранные
+	router.GET("/favorites", fc.GetFavoriteFriends)           // Получение списка избранных
 }

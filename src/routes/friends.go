@@ -11,11 +11,11 @@ func FriendsRouter(router *gin.RouterGroup) {
 	friendsController := controllers.NewFriendController()
 
 	// Регистрация всех маршрутов, соответствующих методам FriendController
-	router.GET("/friends", friendsController.GetFriendsByUserId)       // Получение списка друзей
-	router.POST("/request", friendsController.SendFriendRequest)       // Отправка запроса в друзья
-	router.GET("/reqlis", friendsController.GetFriendRequests)         // Получение списка запросов
-	router.POST("/response", friendsController.RespondToFriendRequest) // Ответ на запрос в друзья
-	router.DELETE("/dfriend", friendsController.RemoveFriend)          // Удаление друга
-	router.POST("/favorites/add", friendsController.AddToFavorites)    // Добавление в избранные
+	router.GET("/friends", friendsController.GetFriendsByUserId)             // Получение списка друзей
+	router.POST("/request", friendsController.SendFriendRequest)             // Отправка запроса в друзья
+	router.GET("/reqlis", friendsController.GetFriendRequests)               // Получение списка запросов
+	router.POST("/response", friendsController.RespondToFriendRequest)       // Ответ на запрос в друзья
+	router.DELETE("/dfriend", friendsController.RemoveFriend)                // Удаление друга
+	router.POST("/favorites/toggle", friendsController.ToggleFavoriteFriend) // Добавление в избранные
 	router.GET("/favorites", friendsController.GetFavoriteFriends)
 }

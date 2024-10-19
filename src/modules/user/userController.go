@@ -1,11 +1,12 @@
 package controllers
 
 import (
+	"net/http"
+
 	"github.com/3whalesProg/Strife-go/src/db"
 	"github.com/3whalesProg/Strife-go/src/models"
 	"github.com/3whalesProg/Strife-go/src/utils"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 // AuthController содержит методы для аутентификации
@@ -57,14 +58,60 @@ func (ac *UserController) CName(c *gin.Context) {
 		Nickname string `json:"nickname" binding:"required"`
 	}
 
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
+		return
+	}
+
+	// Убираем "Bearer " из начала токена, если оно есть
+	if len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
+	}
+
+	// Проверяем токен и получаем информацию из Claims
+	claims, err := utils.CheckUser(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	var user models.Users
+	if err := db.DB.First(&user, claims.ID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Проверяем, не совпадает ли новый ник с текущим
+	if user.Nickname == json.Nickname {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "New nickname must be different from the current one"})
+		return
+	}
+
+	// Обновляем поле Nickname в базе данных
+	user.Nickname = json.Nickname
+	if err := db.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update nickname"})
+		return
+	}
+
+	// Возвращаем информацию о пользователе с обновленным ником
+	c.JSON(http.StatusOK, gin.H{
+		"id":       user.ID,
+		"login":    user.Login,
+		"email":    user.Email,
+		"nickname": user.Nickname,
+		"role":     user.Role,
+	})
+
 	// Привязываем данные из JSON к структуре
 	if err := c.ShouldBindJSON(&json); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
+}
 
 func (ac *UserController) GetUserChats(c *gin.Context) {
-
 
 	token := c.GetHeader("Authorization")
 	if token == "" {
@@ -99,38 +146,6 @@ func (ac *UserController) GetUserChats(c *gin.Context) {
 func (ac *UserController) Hello(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"chats": 111,
-	})
-}
-
-func (ac *UserController) RegisterRoutes(router *gin.RouterGroup) {
-	router.POST("/register", ac.GetUserInfo)
-	router.GET("/getUserChats", ac.GetUserChats)
-	router.GET("/hello", ac.Hello)
-	if err := db.DB.First(&user, claims.ID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
-	// Проверяем, не совпадает ли новый ник с текущим
-	if user.Nickname == json.Nickname {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "New nickname must be different from the current one"})
-		return
-	}
-
-	// Обновляем поле Nickname в базе данных
-	user.Nickname = json.Nickname
-	if err := db.DB.Save(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update nickname"})
-		return
-	}
-
-	// Возвращаем информацию о пользователе с обновленным ником
-	c.JSON(http.StatusOK, gin.H{
-		"id":       user.ID,
-		"login":    user.Login,
-		"email":    user.Email,
-		"nickname": user.Nickname,
-		"role":     user.Role,
 	})
 }
 

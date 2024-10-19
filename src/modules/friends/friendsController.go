@@ -37,7 +37,13 @@ func GetUserByLogin(login string) (*models.Users, error) {
 }
 
 // AddFriends Добавление в друзья
+// AddFriends Добавление в друзья
 func AddFriends(user *models.Users, friend *models.Users) error {
+	// Проверка: нельзя добавить себя в друзья
+	if user.ID == friend.ID {
+		return fmt.Errorf("cannot add yourself as a friend")
+	}
+
 	// Проверка на существующую дружбу
 	exists, err := FriendsExist(user.ID, friend.ID)
 	if err != nil {
@@ -163,6 +169,7 @@ func (fc *FriendController) GetFriendsByUserId(c *gin.Context) {
 }
 
 // SendFriendRequest отправляет запрос на добавление в друзья
+// SendFriendRequest отправляет запрос на добавление в друзья
 func (fc *FriendController) SendFriendRequest(c *gin.Context) {
 	var request struct {
 		RecipientLogin string `json:"recipient_login"`
@@ -186,6 +193,11 @@ func (fc *FriendController) SendFriendRequest(c *gin.Context) {
 	}
 
 	senderID := claims.ID
+	if senderID == recipient.ID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "You cannot send a friend request to yourself"})
+		return
+	}
+
 	sender, err := GetUserByID(senderID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

@@ -106,6 +106,17 @@ func (fc *FriendController) RemoveFriend(c *gin.Context) {
 }
 
 // GetFriendsByUserId список друзей по ID пользователя
+// UserResponse структура для ответа без поля Role и Password
+type UserResponse struct {
+	ID          uint   `json:"id"`
+	Login       string `json:"login"`
+	Email       string `json:"email"`
+	Nickname    string `json:"nickname"`
+	Description string `json:"description"`
+	AvatarURL   string `json:"avatar_url"`
+}
+
+// GetFriendsByUserId список друзей по ID пользователя без роли и пароля
 func (fc *FriendController) GetFriendsByUserId(c *gin.Context) {
 	token := c.Request.Header.Get("Authorization")
 	claims, err := utils.CheckUser(token)
@@ -122,7 +133,7 @@ func (fc *FriendController) GetFriendsByUserId(c *gin.Context) {
 		return
 	}
 
-	friendList := make([]models.Users, len(friends))
+	friendList := make([]UserResponse, len(friends)) // Изменили тип на UserResponse
 	var wg sync.WaitGroup
 
 	for i, friend := range friends {
@@ -131,7 +142,15 @@ func (fc *FriendController) GetFriendsByUserId(c *gin.Context) {
 			defer wg.Done()
 			user, err := GetUserByID(friendID)
 			if err == nil {
-				friendList[i] = *user
+				// Заполняем структуру UserResponse без Role и Password
+				friendList[i] = UserResponse{
+					ID:          user.ID,
+					Login:       user.Login,
+					Email:       user.Email,
+					Nickname:    user.Nickname,
+					Description: user.Description,
+					AvatarURL:   user.AvatarURL,
+				}
 			}
 		}(i, friend.FriendID)
 	}

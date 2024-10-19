@@ -88,18 +88,24 @@ func (ac *UserController) CName(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&json); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ввод"})
+	}
 	token := c.GetHeader("Authorization")
 	if token == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
 		return
 	}
 
-	user, err := uc.handleUserInfo(c)
-	if err != nil {
-		return // Ошибка уже обработана в handleUserInfo
+	// Убираем "Bearer " из начала токена, если оно есть
+	if len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
 	}
 
-
+	// Проверяем токен и получаем информацию из Claims
+	claims, err := utils.CheckUser(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
 	var user models.Users
 	if err := db.DB.First(&user, claims.ID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
@@ -125,14 +131,7 @@ func (ac *UserController) CName(c *gin.Context) {
 		"nickname": user.Nickname,
 		"role":     user.Role,
 	})
-
-	// Привязываем данные из JSON к структуре
-	if err := c.ShouldBindJSON(&json); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
 }
-
 func (ac *UserController) GetUserChats(c *gin.Context) {
 
 	token := c.GetHeader("Authorization")

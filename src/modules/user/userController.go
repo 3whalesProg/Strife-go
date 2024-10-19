@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"regexp"
 	"fmt"
 	"net/http"
 
@@ -202,9 +203,77 @@ func (uc *UserController) UpdateDescription(c *gin.Context) {
 	})
 }
 
+// обновление аватара пользователя
+func (uc *UserController) UpdateAvatar(c *gin.Context) {
+	var json struct {
+		AvatarURL string `json:"avatar_url" binding:"required"`
+	}
+
+	// привязка данных
+	if err := c.ShouldBindJSON(&json); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	// валидносьб url
+	if !isValidURL(json.AvatarURL) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL format"})
+		return
+	}
+
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
+		return
+	}
+
+	if len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
+	}
+
+	// проверка токена
+	claims, err := utils.CheckUser(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	// получаем пользователся из бд по клаймсу JWT токана
+	var user models.Users
+	if err := db.DB.First(&user, claims.ID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// обновление avatar url в тайпе модели юзера
+	user.AvatarURL = json.AvatarURL
+	if err := db.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update avatar"})
+		return
+	}
+
+	// по примеру возращаем измененое тело как влад сверху писал
+	c.JSON(http.StatusOK, gin.H{
+		"id":         user.ID,
+		"login":      user.Login,
+		"email":      user.Email,
+		"nickname":   user.Nickname,
+		"role":       user.Role,
+		"avatar_url": user.AvatarURL,
+	})
+}
+
+// валидация ссылки
+func isValidURL(url string) bool {
+	re := regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`)
+	return re.MatchString(url)
+}
+
 // RegisterRoutes регистрирует маршруты контроллера
 func (uc *UserController) RegisterRoutes(router *gin.RouterGroup) {
 	router.GET("/user", uc.GetUserInfo)
 	router.PATCH("/cname", uc.CName)
+	router.PATCH("/description", uc.UpdateDescription) // Сосем член по кд у гпт
+	router.PATCH("/avatar", uc.UpdateAvatar)
 	router.PATCH("/description", uc.UpdateDescription)
 }

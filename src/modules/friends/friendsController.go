@@ -204,13 +204,29 @@ func (fc *FriendController) GetFriendRequests(c *gin.Context) {
 
 	userId := claims.ID
 
-	var friendRequests []models.FriendRequest
-	if err := db.DB.Where("recipient_id = ?", userId).Find(&friendRequests).Error; err != nil {
+	// Создаем структуру для хранения запроса с логинами отправителей
+	type FriendRequestWithLogin struct {
+		ID          uint   `json:"id"`
+		SenderID    uint   `json:"sender_id"`
+		RecipientID uint   `json:"recipient_id"`
+		SenderLogin string `json:"sender_login"` // Логин отправителя
+		CreatedAt   string `json:"created_at"`
+		UpdatedAt   string `json:"updated_at"`
+	}
+
+	var requestsWithLogins []FriendRequestWithLogin
+
+	// Выполняем запрос с указанием полей (без повторяющихся временных меток GORM)
+	if err := db.DB.Table("friend_requests").
+		Select("friend_requests.id, friend_requests.sender_id, friend_requests.recipient_id, friend_requests.created_at, friend_requests.updated_at, users.login AS sender_login").
+		Joins("join users on users.id = friend_requests.sender_id").
+		Where("friend_requests.recipient_id = ?", userId).
+		Scan(&requestsWithLogins).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, friendRequests)
+	c.JSON(http.StatusOK, requestsWithLogins)
 }
 
 func (fc *FriendController) RespondToFriendRequest(c *gin.Context) {

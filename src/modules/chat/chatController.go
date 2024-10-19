@@ -5,7 +5,6 @@ import (
 
 	"github.com/3whalesProg/Strife-go/src/db"
 	"github.com/3whalesProg/Strife-go/src/models"
-	"github.com/3whalesProg/Strife-go/src/socket"
 	"github.com/3whalesProg/Strife-go/src/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -164,7 +163,6 @@ func (cc *ChatController) SendMessage(c *gin.Context) {
 		return
 	}
 	// socket.Hello()
-	socket.SendMessage(claims.ID, json.ChatID, json.Content)
 	// Возвращаем успешный ответ с данными о сообщении
 	c.JSON(http.StatusOK, gin.H{
 		"message_id": message.ID,

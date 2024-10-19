@@ -1,25 +1,59 @@
 package socket
 
-import "fmt"
+import (
+	"fmt"
+	"log"
 
-func SendMessage(userID uint, chatID uint, msg string) {
-	for _, aboba := range activeChats[uint(chatID)] {
-		activeClients[aboba].Emit("chat.message", msg)
+	"github.com/3whalesProg/Strife-go/src/db"
+	"github.com/3whalesProg/Strife-go/src/models"
+)
+
+func unsubscribeChatsNotifications(userID uint) {
+	// Получаем информацию о пользователе
+	var user models.Users
+	if err := db.DB.Preload("Chats").First(&user, userID).Error; err != nil {
+		log.Println("Ошибка получения пользователя:", err)
+		return
+	}
+
+	// Удаляем пользователя из каждого чата, в котором он участвовал
+	for _, chat := range user.Chats {
+		mu.Lock()
+		// Ищем индекс пользователя в списке чата
+		for i, uid := range activeChats[chat.ID] {
+			if uid == userID {
+				// Удаляем пользователя из этого чата
+				activeChats[chat.ID] = append(activeChats[chat.ID][:i], activeChats[chat.ID][i+1:]...)
+				break
+			}
+		}
+
+		// Если в чате больше нет пользователей, удаляем чат из activeChats
+		if len(activeChats[chat.ID]) == 0 {
+			delete(activeChats, chat.ID)
+		}
+		mu.Unlock()
 	}
 }
 
-func Hello() {
-	for userID, conn := range activeClients {
-		// Логируем информацию о пользователе и его соединении
-		fmt.Printf("Отправка сообщения пользователю с ID: %d\n", userID)
-
-		// Проверяем, что соединение активно
-		if conn != nil {
-			// Отправляем сообщение клиенту
-			conn.Emit("hui", "vlad huiing")
-		} else {
-			// Логируем, если соединение неактивно
-			fmt.Printf("Соединение для пользователя %d не активно\n", userID)
-		}
+func subscribeChatNotifications(userID uint) error {
+	// Получаем информацию о пользователе и его чатах
+	var user models.Users
+	if err := db.DB.Preload("Chats").First(&user, userID).Error; err != nil {
+		log.Println("Ошибка получения пользователя:", err)
+		return err
 	}
+
+	fmt.Println("Пользователь:", user)
+	fmt.Println("Чаты пользователя:")
+
+	// Подписываем пользователя на уведомления чатов
+	mu.Lock()
+	defer mu.Unlock()
+	for _, chat := range user.Chats {
+		activeChats[chat.ID] = append(activeChats[chat.ID], userID)
+	}
+
+	fmt.Println(activeChats)
+	return nil
 }

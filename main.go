@@ -28,12 +28,14 @@ func main() {
 	apiGroup := router.Group("/api/v1")
 	routes.IndexRouter(apiGroup) // Подключаем маршруты из IndexRouter
 
-	server := socket.CreateServer()
+	router.GET("/ws", func(c *gin.Context) {
+		socket.HandleConnections(c.Writer, c.Request)
+	})
 
 	// Маршрутизация для WebSocket
-	router.GET("/socket.io/", gin.WrapH(server)) // Обработка запросов на WebSocket
+	// router.GET("/socket.io/", gin.WrapH(server)) // Обработка запросов на WebSocket
 
-	go server.Serve()
+	// go server.Serve()
 	// Запускаем сервер на порту 8080
 	router.Run(":8080") // по умолчанию запускается на http://localhost:8080
 }

@@ -3,85 +3,92 @@ package socket
 import (
 	"fmt"
 	"log"
-	"net/url"
+	"net/http"
+	"sync"
 
-	"github.com/3whalesProg/Strife-go/src/db"
-	"github.com/3whalesProg/Strife-go/src/models"
 	"github.com/3whalesProg/Strife-go/src/utils"
-	socketio "github.com/googollee/go-socket.io"
+	"github.com/gorilla/websocket"
 )
 
-var activeClients = make(map[uint]socketio.Conn) // Ключ - ID пользователя, значение - соединение
+var activeClients = make(map[uint]*websocket.Conn) // Ключ - ID пользователя, значение - соединение
+var mu sync.Mutex                                  // Для защиты активных клиентов
 type ActiveChat struct {
 	UserID uint // ID пользователя
 }
 
+type Claims struct {
+	ID uint
+	// Другие поля токена...
+}
+
 var activeChats = make(map[uint][]uint)
 
-// CreateServer создает и настраивает сервер WebSocket
-func CreateServer() *socketio.Server {
-	server := socketio.NewServer(nil)
+// Обновление для Gorilla WebSocket
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		// Разрешаем запросы из любого источника (по необходимости)
+		return true
+	},
+}
 
-	server.OnConnect("/", func(s socketio.Conn) error {
-		// Получаем URL
-		rawQuery := s.URL().RawQuery
-		log.Println("RawQuery:", rawQuery)
+// Он конэкшн
+func HandleConnections(w http.ResponseWriter, r *http.Request) {
+	// Апгрейд функции не убираем
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Ошибка апгрейда до WebSocket:", err)
+		return
+	}
+	defer conn.Close() //тут закрываем сокет если токена нет
 
-		// Разбираем URL и получаем токен
-		values, err := url.ParseQuery(rawQuery)
+	// получаем айди
+	claims, err := utils.ExtractTokenAndVerify(r)
+	if err != nil {
+		log.Println("Ошибка проверки токена:", err)
+		return
+	}
+	userID := claims.ID
+	log.Println("Клиент подключен:", userID)
+	// Сохраняем соединение
+	mu.Lock()
+	activeClients[userID] = conn
+	mu.Unlock()
+
+	//подписываемся на чаты
+	if err := subscribeChatNotifications(userID); err != nil {
+		log.Println("Ошибка подписки на уведомления чатов:", err)
+		return
+	}
+
+	fmt.Println(activeChats)
+
+	// Цикл чтения сообщений
+	for {
+		_, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("Ошибка разбора URL:", err)
-			return nil // Или вернуть ошибку
+			log.Println("Ошибка чтения сообщения:", err)
+			break
 		}
+		log.Printf("Сообщение от пользователя %d: %s", userID, message)
+	}
 
-		// Предполагаем, что токен передается в параметре "token"
-		token := values.Get("token")
-		if token == "" {
-			log.Println("Токен не найден в запросе.")
-			return nil // Или вернуть ошибку
-		}
+	// Отключение клиента
+	DisconnectClient(userID, conn)
+}
 
-		log.Println("Токен:", token)
+func DisconnectClient(userID uint, conn *websocket.Conn) {
+	// Закрываем соединение
+	err := conn.Close()
+	if err != nil {
+		log.Println("Ошибка при закрытии соединения:", err)
+	}
+	//отписываемся от чатов
+	unsubscribeChatsNotifications(userID)
 
-		// Проверяем токен и получаем информацию из Claims
-		claims, err := utils.CheckUser(token) // Функция для декодирования токена
-		if err != nil {
-			log.Println("Ошибка проверки токена:", err)
-			return nil // Или вернуть ошибку
-		}
+	//удаляем из эктив
+	mu.Lock()
+	delete(activeClients, userID)
+	mu.Unlock()
 
-		userID := claims.ID // Предполагаем, что ID пользователя находится в claims
-
-		log.Println("Клиент подключен:", userID)
-		activeClients[userID] = s // Сохраняем соединение под ID пользователя
-
-		var user models.Users
-		if err := db.DB.Preload("Chats").First(&user, claims.ID).Error; err != nil {
-			log.Println("Ошибка получения пользователя:", err)
-			return nil
-		}
-		fmt.Println("Пользователь:", user)
-		fmt.Println("Чаты пользователя:")
-		for _, chat := range user.Chats {
-			activeChats[chat.ID] = append(activeChats[chat.ID], claims.ID)
-		}
-
-		fmt.Println(activeChats)
-		return nil
-	})
-
-	server.OnDisconnect("/", func(s socketio.Conn, reason string) {
-		// Удаляем соединение по ID пользователя
-		for userID, conn := range activeClients {
-			if conn.ID() == s.ID() {
-				log.Println("Клиент отключен:", userID)
-				delete(activeClients, userID) // Удаляем соединение при отключении
-				break
-			}
-		}
-	})
-
-	// SetupChatRoutes(server)
-
-	return server
+	log.Printf("Клиент отключен: %d", userID)
 }

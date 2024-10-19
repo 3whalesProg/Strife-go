@@ -22,13 +22,20 @@ func NewChatController() *ChatController {
 // CreateChat создает новый чат
 func (ac *ChatController) CreateChat(c *gin.Context) {
 	var json struct {
-		Title   string `json:"title" binding:"required"`    // Название чата
-		UserIDs []uint `json:"user_ids" binding:"required"` // Список ID пользователей
+		Title       string `json:"title" binding:"required"`    // Название чата
+		UserIDs     []uint `json:"user_ids" binding:"required"` // Список ID пользователей
+		IsTetATet   *bool  `json:"is_tet_a_tet"`                // Опциональный параметр: является ли чат личным
+		RecipientID *uint  `json:"recipient_id"`
 	}
 
 	// Привязываем JSON к структуре
 	if err := c.ShouldBindJSON(&json); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if (json.IsTetATet != nil && json.RecipientID == nil) || (json.IsTetATet == nil && json.RecipientID != nil) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Both is_tet_a_tet and recipient_id must be provided together"})
 		return
 	}
 
@@ -64,8 +71,10 @@ func (ac *ChatController) CreateChat(c *gin.Context) {
 
 	// Возвращаем успешный ответ
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Chat created successfully",
-		"chat_id": chat.ID,
+		"message":      "Chat created successfully",
+		"chat_id":      chat.ID,
+		"recipient_id": chat.RecipientID,
+		"is_tet_a_tet": chat.IsTetATet,
 	})
 }
 

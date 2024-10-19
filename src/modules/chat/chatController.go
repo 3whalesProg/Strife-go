@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/3whalesProg/Strife-go/src/db"
@@ -108,7 +109,37 @@ func (ac *ChatController) AddUserToChat(c *gin.Context) {
 	})
 }
 
-func (cc *ChatController) SendMessage(c *gin.Context) {
+func (cc *ChatController) GetUserChats(c *gin.Context) {
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
+		return
+	}
+
+	// Убираем "Bearer " из начала токена, если оно есть
+	if len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
+	}
+
+	// Проверяем токен и получаем информацию из Claims
+	claims, err := utils.CheckUser(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+	// Привязка входящих данных JSON
+	var user models.Users
+	if err := db.DB.Preload("Chats").First(&user, claims.ID).Error; err != nil {
+		log.Println("Ошибка получения пользователя:", err)
+	}
+
+	// Возвращаем сообщения, привязанные к чату
+	c.JSON(http.StatusOK, gin.H{
+		"chats": user.Chats,
+	})
+}
+
+func (ac *ChatController) SendMessage(c *gin.Context) {
 	var json struct {
 		ChatID  uint   `json:"chat_id" binding:"required"` // ID чата
 		Content string `json:"content" binding:"required"` // Текст сообщения
@@ -205,4 +236,5 @@ func (ac *ChatController) RegisterRoutes(router *gin.RouterGroup) {
 	router.POST("/addUserToChat", ac.AddUserToChat)
 	router.POST("/sendMessage", ac.AddUserToChat)
 	router.POST("/getChatMessages", ac.GetChatMessages)
+	router.GET("/getUserChats", ac.GetUserChats)
 }

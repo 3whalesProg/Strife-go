@@ -422,18 +422,29 @@ func (cc *ChatController) GetChatMessages(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Chat not found"})
 		return
 	}
-
-	// Загрузка сообщений с использованием offset и limit
 	var messages []models.Messages
-	if err := db.DB.Where("chat_id = ?", json.ChatID).
-		Preload("Sender").
-		Order("created_at DESC"). // Сортировка по времени создания сообщений
-		Limit(50).
-		Offset(json.Offset).
-		Find(&messages).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load messages"})
-		return
+	if json.Offset >= 1 {
+		if err := db.DB.Where("chat_id = ?", json.ChatID).
+			Preload("Sender").
+			Order("created_at DESC"). // Сортировка по времени создания сообщений
+			Limit(50).
+			Offset(json.Offset).
+			Find(&messages).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load messages"})
+			return
+		}
+	} else {
+		if err := db.DB.Where("chat_id = ?", json.ChatID).
+			Preload("Sender").
+			Order("created_at DESC"). // Сортировка по времени создания сообщений
+			Limit(50).
+			Offset(json.Offset).
+			Find(&messages).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load messages"})
+			return
+		}
 	}
+	// Загрузка сообщений с использованием offset и limit
 
 	// Возвращаем сообщения с учетом лимита и смещения
 	c.JSON(http.StatusOK, gin.H{

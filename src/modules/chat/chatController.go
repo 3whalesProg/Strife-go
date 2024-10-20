@@ -27,6 +27,23 @@ func (ac *ChatController) CreateChat(c *gin.Context) {
 		IsTetATet   *bool  `json:"is_tet_a_tet"`                // Опциональный параметр: является ли чат личным
 		RecipientID *uint  `json:"recipient_id"`
 	}
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
+		return
+	}
+
+	// Убираем "Bearer " из начала токена, если оно есть
+	if len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
+	}
+
+	// Проверяем токен и получаем информацию из Claims
+	claims, err := utils.CheckUser(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
 
 	// Привязываем JSON к структуре
 	if err := c.ShouldBindJSON(&json); err != nil {
@@ -44,7 +61,7 @@ func (ac *ChatController) CreateChat(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "At least one user must be specified"})
 		return
 	}
-
+	json.UserIDs = append(json.UserIDs, claims.ID)
 	// Получаем список пользователей по их ID
 	var users []models.Users
 	if err := db.DB.Where("id IN ?", json.UserIDs).Find(&users).Error; err != nil || len(users) == 0 {

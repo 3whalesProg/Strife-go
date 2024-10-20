@@ -69,6 +69,9 @@ func (ac *ChatController) CreateChat(c *gin.Context) {
 		return
 	}
 
+	for _, userID := range json.UserIDs {
+		socket.AddUserToChat(chat.ID, userID)
+	}
 	// Возвращаем успешный ответ
 	c.JSON(http.StatusOK, gin.H{
 		"message":      "Chat created successfully",

@@ -210,7 +210,7 @@ func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 		})
 		return
 	}
-
+	socket.AddUserToChat(targetChat.ID, claims.ID)
 	// Возвращаем найденный чат
 	c.JSON(http.StatusOK, gin.H{
 		"message":      "Chat found successfully",
@@ -283,6 +283,8 @@ func (cc *ChatController) GetUserChats(c *gin.Context) {
 	var user models.Users
 	if err := db.DB.
 		Preload("Chats.Users"). // Загружаем связанные чаты и пользователей в этих чатах
+		Preload("Chats.RecipientID").
+		Preload("Chats.Recipient").
 		First(&user, claims.ID).Error; err != nil {
 		log.Println("Ошибка получения пользователя:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving user"})

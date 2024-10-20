@@ -16,4 +16,6 @@ func ChatRouter(router *gin.RouterGroup) {
 	router.POST("/getChatMessages", chatController.GetChatMessages)
 	router.POST("/getCurrentChat", chatController.GetCurrentChat)
 	router.GET("/getUserChats", chatController.GetUserChats)
+	router.POST("/editMessage", chatController.EditChatMessages) // Новый маршрут для редактирования сообщений
+	router.POST("/deleteMessage", chatController.DeleteChatMessage)
 }

@@ -401,7 +401,117 @@ func (cc *ChatController) GetChatMessages(c *gin.Context) {
 	})
 }
 
-// RegisterRoutes регистрирует маршруты для ChatController
+func (cc *ChatController) EditChatMessages(c *gin.Context) {
+	var json struct {
+		MessageID uint   `json:"message_id" binding:"required"` // ID сообщения
+		Content   string `json:"content" binding:"required"`    // Новый текст сообщения
+	}
+
+	// Привязка входящих данных JSON
+	if err := c.ShouldBindJSON(&json); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data"})
+		return
+	}
+
+	// Проверка токена
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
+		return
+	}
+	if len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
+	}
+
+	// Получаем данные пользователя из токена
+	claims, err := utils.CheckUser(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	// Ищем сообщение по его ID
+	var message models.Messages
+	if err := db.DB.First(&message, json.MessageID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Message not found"})
+		return
+	}
+
+	// Проверяем, что текущий пользователь является автором сообщения
+	if message.SenderID != claims.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can only edit your own messages"})
+		return
+	}
+
+	// Обновляем текст сообщения
+	message.Content = json.Content
+	if err := db.DB.Save(&message).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update message"})
+		return
+	}
+
+	// Возвращаем обновленное сообщение
+	c.JSON(http.StatusOK, gin.H{
+		"message_id": message.ID,
+		"content":    message.Content,
+		"updated_at": message.UpdatedAt,
+	})
+}
+
+func (cc *ChatController) DeleteChatMessage(c *gin.Context) {
+	var json struct {
+		MessageID uint `json:"message_id" binding:"required"` // ID сообщения
+	}
+
+	// Привязка входящих данных JSON
+	if err := c.ShouldBindJSON(&json); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data"})
+		return
+	}
+
+	// Проверка токена
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not provided"})
+		return
+	}
+	if len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
+	}
+
+	// Получаем данные пользователя из токена
+	claims, err := utils.CheckUser(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	// Ищем сообщение по его ID
+	var message models.Messages
+	if err := db.DB.First(&message, json.MessageID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Message not found"})
+		return
+	}
+
+	// Проверяем, что текущий пользователь является автором сообщения
+	if message.SenderID != claims.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own messages"})
+		return
+	}
+
+	// Удаляем сообщение
+	if err := db.DB.Delete(&message).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete message"})
+		return
+	}
+
+	// Возвращаем успешный ответ
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "Message deleted successfully",
+		"message_id": message.ID,
+	})
+}
+
 func (ac *ChatController) RegisterRoutes(router *gin.RouterGroup) {
 	router.POST("/createChat", ac.CreateChat)
 	router.POST("/addUserToChat", ac.AddUserToChat)
@@ -409,4 +519,6 @@ func (ac *ChatController) RegisterRoutes(router *gin.RouterGroup) {
 	router.POST("/getChatMessages", ac.GetChatMessages)
 	router.POST("/getCurrentChat", ac.GetCurrentChat)
 	router.GET("/getUserChats", ac.GetUserChats)
+	router.POST("/editMessage", ac.EditChatMessages)    // Новый маршрут для редактирования сообщений
+	router.POST("/deleteMessage", ac.DeleteChatMessage) // Новый маршрут для удаления сообщений
 }

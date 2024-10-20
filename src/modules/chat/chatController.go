@@ -152,7 +152,7 @@ func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 	var user2 models.Users
 	if err := db.DB.
 		Preload("Chats.Users"). // Загружаем связанные чаты и пользователей в этих чатах
-		First(&user, json.UserID).Error; err != nil {
+		First(&user2, json.UserID).Error; err != nil {
 		log.Println("Ошибка получения пользователя:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving user"})
 		return

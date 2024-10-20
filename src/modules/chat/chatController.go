@@ -149,6 +149,24 @@ func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 		}
 	}
 
+	var user2 models.Users
+	if err := db.DB.
+		Preload("Chats.Users"). // Загружаем связанные чаты и пользователей в этих чатах
+		First(&user, json.UserID).Error; err != nil {
+		log.Println("Ошибка получения пользователя:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving user"})
+		return
+	}
+
+	for _, chat := range user2.Chats {
+		if chat.IsTetATet {
+			if chat.RecipientID == claims.ID || containsUsers(chat.Users, claims.ID, json.UserID) {
+				targetChat = chat
+				break
+			}
+		}
+	}
+
 	UserIDs := []uint{claims.ID} // Используем ID текущего пользователя и получателя
 	var users []models.Users
 	if err := db.DB.Where("id IN ?", UserIDs).Find(&users).Error; err != nil || len(users) == 0 {

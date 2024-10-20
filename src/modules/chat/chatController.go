@@ -438,7 +438,6 @@ func (cc *ChatController) GetChatMessages(c *gin.Context) {
 			Preload("Sender").
 			Order("created_at DESC"). // Сортировка по времени создания сообщений
 			Limit(50).
-			Offset(json.Offset).
 			Find(&messages).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load messages"})
 			return

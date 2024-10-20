@@ -182,6 +182,7 @@ func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 			return
 		}
 		// Возвращаем информацию о созданном чате
+		socket.AddUserToChat(newChat.ID, claims.ID)
 		c.JSON(http.StatusOK, gin.H{
 			"message":      "Chat created successfully",
 			"chat_id":      newChat.ID,
@@ -233,7 +234,7 @@ func (ac *ChatController) AddUserToChat(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add user to chat"})
 		return
 	}
-
+	socket.AddUserToChat(chat.ID, json.UserID)
 	// Возвращаем успешный ответ
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User added to chat successfully",

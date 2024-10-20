@@ -59,6 +59,24 @@ func subscribeChatNotifications(userID uint) error {
 	return nil
 }
 
+func AddUserToChat(chatID uint, userID uint) {
+	// Проверяем, существует ли уже чат с таким chatID
+	if _, exists := activeChats[chatID]; exists {
+		// Проверяем, добавлен ли уже этот пользователь в чат
+		for _, id := range activeChats[chatID] {
+			if id == userID {
+				// Пользователь уже добавлен в чат, не нужно дублировать
+				return
+			}
+		}
+		// Добавляем пользователя в существующий чат
+		activeChats[chatID] = append(activeChats[chatID], userID)
+	} else {
+		// Чат не существует, создаем новый и добавляем пользователя
+		activeChats[chatID] = []uint{userID}
+	}
+}
+
 func SendMessageToChat(chatID uint, message models.Messages) {
 
 	if userIDs, ok := activeChats[chatID]; ok {
@@ -66,6 +84,7 @@ func SendMessageToChat(chatID uint, message models.Messages) {
 		for _, userID := range userIDs {
 			if client, exists := activeClients[userID]; exists {
 				err := client.WriteJSON(gin.H{
+					"event":    "new_message", // Добавляем событие
 					"ID":       message.ID,
 					"Content":  message.Content,
 					"ChatID":   chatID,

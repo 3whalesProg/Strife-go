@@ -282,7 +282,7 @@ func (cc *ChatController) GetUserChats(c *gin.Context) {
 	// Привязка входящих данных JSON
 	var user models.Users
 	if err := db.DB.
-		Preload("Chats.Users"). // Загружаем связанные чаты и пользователей в этих чатах
+		Preload("Chats.Users").
 		First(&user, claims.ID).Error; err != nil {
 		log.Println("Ошибка получения пользователя:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving user"})
@@ -296,6 +296,7 @@ func (cc *ChatController) GetUserChats(c *gin.Context) {
 				// Если пользователь не тот, что в claims (собеседник)
 				if chatUser.ID != claims.ID {
 					user.Chats[i].RecipientID = chatUser.ID
+					user.Chats[i].Recipient = chatUser
 					// Заменяем title на ник собеседника
 					user.Chats[i].Title = chatUser.Nickname
 					break

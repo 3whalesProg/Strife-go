@@ -277,6 +277,7 @@ func (cc *ChatController) GetUserChats(c *gin.Context) {
 			for _, chatUser := range chat.Users {
 				// Если пользователь не тот, что в claims (собеседник)
 				if chatUser.ID != claims.ID {
+					user.Chats[i].RecipientID = chatUser.ID
 					// Заменяем title на ник собеседника
 					user.Chats[i].Title = chatUser.Nickname
 					break

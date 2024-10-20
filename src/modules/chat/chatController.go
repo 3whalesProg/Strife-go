@@ -426,7 +426,6 @@ func (cc *ChatController) GetChatMessages(c *gin.Context) {
 	if json.Offset >= 1 {
 		if err := db.DB.Where("chat_id = ?", json.ChatID).
 			Preload("Sender").
-			Order("created_at DESC"). // Сортировка по времени создания сообщений
 			Limit(50).
 			Offset(json.Offset).
 			Find(&messages).Error; err != nil {
@@ -436,7 +435,6 @@ func (cc *ChatController) GetChatMessages(c *gin.Context) {
 	} else {
 		if err := db.DB.Where("chat_id = ?", json.ChatID).
 			Preload("Sender").
-			Order("created_at DESC"). // Сортировка по времени создания сообщений
 			Limit(50).
 			Find(&messages).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load messages"})

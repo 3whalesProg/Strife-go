@@ -118,8 +118,12 @@ func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 	var targetChat *models.Chats
 	for _, chat := range user.Chats {
 		if chat.IsTetATet && chat.RecipientID == json.UserID {
-			targetChat = chat
-			break
+			for _, user := range chat.Users {
+				if user.ID == claims.ID {
+					targetChat = chat
+					break
+				}
+			}
 		}
 	}
 

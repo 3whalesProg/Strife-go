@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -79,14 +78,27 @@ func (ac *ChatController) CreateChat(c *gin.Context) {
 	})
 }
 
-func containsUser(users []*models.Users, userID uint) bool {
-	fmt.Println(users, "hello")
+func containsUsers(users []*models.Users, userID uint, user2ID uint) bool {
+	var foundUser1, foundUser2 bool
+
+	// Проходим по всем пользователям в чате
 	for _, user := range users {
-		fmt.Println(user, "user")
+		// Проверяем наличие userID
 		if user.ID == userID {
+			foundUser1 = true
+		}
+		// Проверяем наличие user2ID
+		if user.ID == user2ID {
+			foundUser2 = true
+		}
+
+		// Если оба найдены, можно сразу вернуть true
+		if foundUser1 && foundUser2 {
 			return true
 		}
 	}
+
+	// Если один из пользователей не найден, возвращаем false
 	return false
 }
 func (ac *ChatController) GetCurrentChat(c *gin.Context) {
@@ -130,7 +142,7 @@ func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 	var targetChat *models.Chats
 	for _, chat := range user.Chats {
 		if chat.IsTetATet {
-			if chat.RecipientID == json.UserID || containsUser(chat.Users, claims.ID) {
+			if chat.RecipientID == json.UserID || containsUsers(chat.Users, claims.ID, json.UserID) {
 				targetChat = chat
 				break
 			}

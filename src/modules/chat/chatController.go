@@ -384,24 +384,44 @@ func (ac *ChatController) SendMessage(c *gin.Context) {
 func (cc *ChatController) GetChatMessages(c *gin.Context) {
 	var json struct {
 		ChatID uint `json:"chat_id" binding:"required"` // ID чата
+		Offset int  `json:"offset" binding:"required`   // Смещение для пагинации (по умолчанию 0)
 	}
 
 	// Привязка входящих данных JSON
 	if err := c.ShouldBindJSON(&json); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "chat_id is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "chat_id and limit are required"})
 		return
 	}
 
-	// Загрузка чата с привязанными сообщениями
+	// Проверяем, что лимит положительный
+	if json.Offset <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Offset must be greater than 0"})
+		return
+	}
+
+	// Загрузка чата с привязанными сообщениями с использованием offset и limit
 	var chat models.Chats
-	if err := db.DB.Preload("Messages.Sender").First(&chat, json.ChatID).Error; err != nil {
+	if err := db.DB.Preload("Messages.Sender").
+		First(&chat, json.ChatID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Chat not found"})
 		return
 	}
 
-	// Возвращаем сообщения, привязанные к чату
+	// Загрузка сообщений с использованием offset и limit
+	var messages []models.Messages
+	if err := db.DB.Where("chat_id = ?", json.ChatID).
+		Preload("Sender").
+		Order("created_at DESC"). // Сортировка по времени создания сообщений
+		Limit(50).
+		Offset(json.Offset).
+		Find(&messages).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load messages"})
+		return
+	}
+
+	// Возвращаем сообщения с учетом лимита и смещения
 	c.JSON(http.StatusOK, gin.H{
-		"messages": chat.Messages,
+		"messages": messages,
 	})
 }
 

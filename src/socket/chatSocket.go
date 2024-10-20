@@ -83,6 +83,10 @@ func SendMessageToChat(chatID uint, message models.Messages) {
 		fmt.Println(activeChats[chatID])
 		for _, userID := range userIDs {
 			if client, exists := activeClients[userID]; exists {
+				var sender models.Users
+				if err := db.DB.First(&sender, userID).Error; err != nil {
+					return
+				}
 				err := client.WriteJSON(gin.H{
 					"event":    "new_message", // Добавляем событие
 					"ID":       message.ID,
@@ -90,6 +94,7 @@ func SendMessageToChat(chatID uint, message models.Messages) {
 					"ChatID":   chatID,
 					"SenderID": message.SenderID,
 					"reatedAt": message.CreatedAt,
+					"Sender":   sender,
 				})
 				if err != nil {
 					log.Printf("Ошибка отправки сообщения пользователю %d: %v", userID, err)

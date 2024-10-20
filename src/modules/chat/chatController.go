@@ -284,7 +284,6 @@ func (cc *ChatController) GetUserChats(c *gin.Context) {
 	if err := db.DB.
 		Preload("Chats.Users"). // Загружаем связанные чаты и пользователей в этих чатах
 		Preload("Chats.RecipientID").
-		Preload("Chats.Recipient").
 		First(&user, claims.ID).Error; err != nil {
 		log.Println("Ошибка получения пользователя:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving user"})

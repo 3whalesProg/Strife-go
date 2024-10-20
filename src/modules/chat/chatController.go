@@ -59,8 +59,14 @@ func (ac *ChatController) CreateChat(c *gin.Context) {
 
 	// Создаем новый чат и связываем его с пользователями
 	chat := models.Chats{
-		Title: json.Title,
-		Users: userPointers, // Связываем указатели на пользователей с чатом
+		Title:     json.Title,
+		Users:     userPointers,                             // Связываем указатели на пользователей с чатом
+		IsTetATet: json.IsTetATet != nil && *json.IsTetATet, // Логика для IsTetATet (по умолчанию false)
+	}
+
+	// Если это личный чат и указан RecipientID, устанавливаем его
+	if json.IsTetATet != nil && *json.IsTetATet && json.RecipientID != nil {
+		chat.RecipientID = *json.RecipientID
 	}
 
 	// Сохраняем чат в базе данных

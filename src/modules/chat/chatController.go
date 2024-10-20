@@ -74,10 +74,7 @@ func (ac *ChatController) CreateChat(c *gin.Context) {
 	}
 	// Возвращаем успешный ответ
 	c.JSON(http.StatusOK, gin.H{
-		"message":      "Chat created successfully",
-		"chat_id":      chat.ID,
-		"recipient_id": chat.RecipientID,
-		"is_tet_a_tet": chat.IsTetATet,
+		"chat": chat,
 	})
 }
 

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -79,7 +80,9 @@ func (ac *ChatController) CreateChat(c *gin.Context) {
 }
 
 func containsUser(users []*models.Users, userID uint) bool {
+	fmt.Println(users, "hello")
 	for _, user := range users {
+		fmt.Println(user, "user")
 		if user.ID == userID {
 			return true
 		}
@@ -116,17 +119,17 @@ func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 	}
 
 	var user models.Users
-	if err := db.DB.Preload("Chats").First(&user, claims.ID).Error; err != nil {
+	if err := db.DB.
+		Preload("Chats.Users"). // Загружаем связанные чаты и пользователей в этих чатах
+		First(&user, claims.ID).Error; err != nil {
 		log.Println("Ошибка получения пользователя:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving user"})
 		return
 	}
 
-	// Ищем среди чатов пользователя нужный, где is_tet_a_tet = true и recipient_id = переданному
 	var targetChat *models.Chats
 	for _, chat := range user.Chats {
 		if chat.IsTetATet {
-			// Проверяем условие: или chat.RecipientID == json.UserID, или user.ID == claims.ID
 			if chat.RecipientID == json.UserID || containsUser(chat.Users, claims.ID) {
 				targetChat = chat
 				break
@@ -352,7 +355,7 @@ func (cc *ChatController) GetChatMessages(c *gin.Context) {
 func (ac *ChatController) RegisterRoutes(router *gin.RouterGroup) {
 	router.POST("/createChat", ac.CreateChat)
 	router.POST("/addUserToChat", ac.AddUserToChat)
-	router.POST("/sendMessage", ac.AddUserToChat)
+	router.POST("/sendMessage", ac.SendMessage)
 	router.POST("/getChatMessages", ac.GetChatMessages)
 	router.POST("/getCurrentChat", ac.GetCurrentChat)
 	router.GET("/getUserChats", ac.GetUserChats)

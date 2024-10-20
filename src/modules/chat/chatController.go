@@ -62,6 +62,7 @@ func (ac *ChatController) CreateChat(c *gin.Context) {
 		Title:       json.Title,
 		Users:       userPointers, // Связываем указатели на пользователей с чатом
 		RecipientID: 1,
+		IsTetATet:   false,
 	}
 
 	// Сохраняем чат в базе данных

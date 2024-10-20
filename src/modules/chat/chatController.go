@@ -78,6 +78,14 @@ func (ac *ChatController) CreateChat(c *gin.Context) {
 	})
 }
 
+func containsUser(users []*models.Users, userID uint) bool {
+	for _, user := range users {
+		if user.ID == userID {
+			return true
+		}
+	}
+	return false
+}
 func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 	var json struct {
 		UserID uint `json:"user_ids" binding:"required"` // ID получателя
@@ -117,12 +125,11 @@ func (ac *ChatController) GetCurrentChat(c *gin.Context) {
 	// Ищем среди чатов пользователя нужный, где is_tet_a_tet = true и recipient_id = переданному
 	var targetChat *models.Chats
 	for _, chat := range user.Chats {
-		if chat.IsTetATet && chat.RecipientID == json.UserID {
-			for _, user := range chat.Users {
-				if user.ID == claims.ID {
-					targetChat = chat
-					break
-				}
+		if chat.IsTetATet {
+			// Проверяем условие: или chat.RecipientID == json.UserID, или user.ID == claims.ID
+			if chat.RecipientID == json.UserID || containsUser(chat.Users, claims.ID) {
+				targetChat = chat
+				break
 			}
 		}
 	}

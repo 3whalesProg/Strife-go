@@ -19,4 +19,5 @@ func FriendsRouter(router *gin.RouterGroup) {
 	router.POST("/favorites/toggle", friendsController.ToggleFavoriteFriend) // Добавление в избранные
 	router.GET("/favorites", friendsController.GetFavoriteFriends)
 	router.POST("/common_friends", friendsController.GetCommonFriends)
+
 }

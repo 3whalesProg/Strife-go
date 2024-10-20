@@ -410,10 +410,10 @@ func (cc *ChatController) GetChatMessages(c *gin.Context) {
 	}
 
 	// Проверяем, что лимит положительный
-	// if json.Offset <= 0 {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Offset must be greater than 0"})
-	// 	return
-	// }
+	if json.Offset <= -1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Offset must be greater than 0"})
+		return
+	}
 
 	// Загрузка чата с привязанными сообщениями с использованием offset и limit
 	var chat models.Chats

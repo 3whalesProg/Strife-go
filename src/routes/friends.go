@@ -18,4 +18,5 @@ func FriendsRouter(router *gin.RouterGroup) {
 	router.DELETE("/dfriend", friendsController.RemoveFriend)                // Удаление друга
 	router.POST("/favorites/toggle", friendsController.ToggleFavoriteFriend) // Добавление в избранные
 	router.GET("/favorites", friendsController.GetFavoriteFriends)
+	router.POST("/common_friends", friendsController.GetCommonFriends)
 }

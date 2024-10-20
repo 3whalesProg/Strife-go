@@ -384,7 +384,7 @@ func (ac *ChatController) SendMessage(c *gin.Context) {
 func (cc *ChatController) GetChatMessages(c *gin.Context) {
 	var json struct {
 		ChatID uint `json:"chat_id" binding:"required"` // ID чата
-		Offset int  `json:"offset" binding:"required`   // Смещение для пагинации (по умолчанию 0)
+		Offset int  `json:"offset" binding:"required"`  // Смещение для пагинации (по умолчанию 0)
 	}
 
 	// Привязка входящих данных JSON

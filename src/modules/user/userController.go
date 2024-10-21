@@ -357,5 +357,5 @@ func (uc *UserController) RegisterRoutes(router *gin.RouterGroup) {
 	router.PATCH("/cname", uc.CName)
 	router.PATCH("/description", uc.UpdateDescription) // Сосем член по кд у гпт
 	router.PATCH("/avatar", uc.UpdateAvatar)
-	router.PATCH("/description", uc.UpdateDescription)
+
 }

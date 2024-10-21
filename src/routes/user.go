@@ -17,4 +17,5 @@ func UserRouter(router *gin.RouterGroup) {
 	router.PATCH("/description", userController.UpdateDescription)
 	router.POST("/getUserByLogin", userController.GetUserByLoginController)
 	router.POST("/getUserById", userController.GetUserByIDController)
+	router.PATCH("/avatar", userController.UpdateAvatar)
 }

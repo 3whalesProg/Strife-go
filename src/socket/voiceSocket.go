@@ -57,6 +57,7 @@ func LeaveRoom(roomId uint, userID uint) {
 }
 
 func CreateRoom(userID uint, chatID uint) {
+	fmt.Println(chatID)
 	activeRooms[chatID] = append(activeRooms[chatID], userID)
 	fmt.Println(activeRooms)
 	if userIDs, exists := activeChats[chatID]; exists {

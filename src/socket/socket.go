@@ -30,8 +30,6 @@ var activeChats = make(map[uint][]uint)
 var activeRooms = make(map[uint][]uint)
 var requestRooms = make(map[uint][]uint)
 
-var fff = 1
-
 // Обновление для Gorilla WebSocket
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {

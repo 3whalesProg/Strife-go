@@ -40,6 +40,10 @@ func (vc *VoiceController) CreateRoom(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
+	if err := c.ShouldBindJSON(&json); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	// Получаем пользователя из базы данных по ID, который хранится в JWT токене
 	var user models.Users

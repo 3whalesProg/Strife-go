@@ -12,4 +12,6 @@ func VoiceRouter(router *gin.RouterGroup) {
 
 	router.POST("/createRoom", voiceController.CreateRoom)
 	router.POST("/joinRoom", voiceController.JoinRoom)
+	router.POST("/acceptRequest", voiceController.AcceptRequest)
+	router.POST("/rejectRequest", voiceController.RejectRequest)
 }

@@ -96,6 +96,7 @@ func RequestJoinRoom(roomId uint, userID uint) {
 
 func AcceptJoinRoom(roomId uint, userID uint) {
 	if users, exists := requestRooms[roomId]; exists {
+		mu.Lock()
 		for i, id := range users {
 			if id == userID {
 				requestRooms[roomId] = append(users[:i], users[i+1:]...)
@@ -106,9 +107,11 @@ func AcceptJoinRoom(roomId uint, userID uint) {
 		if len(requestRooms[roomId]) == 0 {
 			delete(requestRooms, roomId)
 		}
+		mu.Unlock()
 	}
 	activeRooms[roomId] = append(activeRooms[roomId], userID)
 	if userIDs, ok := activeRooms[roomId]; ok {
+		mu.Lock()
 		for _, userID := range userIDs {
 			if client, exists := activeClients[userID]; exists {
 				var sender models.Users
@@ -124,6 +127,7 @@ func AcceptJoinRoom(roomId uint, userID uint) {
 				}
 			}
 		}
+		mu.Unlock()
 	} else {
 		log.Printf("Нет подписанных пользователей для чата с ID %d", roomId)
 	}
@@ -131,6 +135,7 @@ func AcceptJoinRoom(roomId uint, userID uint) {
 
 func RejectJoinRoom(roomId uint, userID uint) {
 	if users, exists := requestRooms[roomId]; exists {
+		mu.Lock()
 		for i, id := range users {
 			if id == userID {
 				requestRooms[roomId] = append(users[:i], users[i+1:]...)
@@ -141,8 +146,10 @@ func RejectJoinRoom(roomId uint, userID uint) {
 		if len(requestRooms[roomId]) == 0 {
 			delete(requestRooms, roomId)
 		}
+		mu.Unlock()
 	}
 	if userIDs, ok := activeRooms[roomId]; ok {
+		mu.Lock()
 		for _, userID := range userIDs {
 			if client, exists := activeClients[userID]; exists {
 				var sender models.Users
@@ -158,6 +165,7 @@ func RejectJoinRoom(roomId uint, userID uint) {
 				}
 			}
 		}
+		mu.Unlock()
 	} else {
 		log.Printf("Нет подписанных пользователей для чата с ID %d", roomId)
 	}

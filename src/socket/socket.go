@@ -27,6 +27,8 @@ type Claims struct {
 
 var activeClients = make(map[uint]*websocket.Conn)
 var activeChats = make(map[uint][]uint)
+var activeRooms = make(map[uint][]uint)
+var requestRooms = make(map[uint][]uint)
 
 var fff = 1
 

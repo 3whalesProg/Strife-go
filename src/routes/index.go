@@ -18,4 +18,7 @@ func IndexRouter(router *gin.RouterGroup) {
 	chatGroup := router.Group("/chat")
 	ChatRouter(chatGroup)
 	// Здесь можно добавить другие группы маршрутов для v1
+
+	voiceGroup := router.Group("/room")
+	VoiceRouter(voiceGroup)
 }

@@ -1,6 +1,7 @@
 package socket
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/3whalesProg/Strife-go/src/db"
@@ -57,7 +58,10 @@ func LeaveRoom(roomId uint, userID uint) {
 
 func CreateRoom(userID uint, chatID uint) {
 	activeRooms[chatID] = append(activeRooms[chatID], userID)
+	fmt.Println(activeRooms)
 	if userIDs, exists := activeChats[chatID]; exists {
+		mu.Lock()
+		fmt.Println(userIDs)
 		for _, otherUserID := range userIDs {
 			// Пропускаем текущего пользователя
 			if otherUserID == userID {
@@ -65,6 +69,7 @@ func CreateRoom(userID uint, chatID uint) {
 			}
 			// Вызываем RequestJoinRoom для всех остальных пользователей
 			RequestJoinRoom(chatID, otherUserID)
+			mu.Unlock()
 		}
 	} else {
 		log.Printf("Чат с ID %d не найден в activeChats", chatID)

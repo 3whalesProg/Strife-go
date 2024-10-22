@@ -170,3 +170,41 @@ func RejectJoinRoom(roomId uint, userID uint) {
 		log.Printf("Нет подписанных пользователей для чата с ID %d", roomId)
 	}
 }
+
+func unsubscribeRooms(userID uint) {
+	// Получаем информацию о пользователе
+	var user models.Users
+	if err := db.DB.Preload("Chats").First(&user, userID).Error; err != nil {
+		log.Println("Ошибка получения пользователя:", err)
+		return
+	}
+
+	// Удаляем пользователя из каждого чата, в котором он участвовал
+	for _, chat := range user.Chats {
+		mu.Lock()
+		// Ищем индекс пользователя в списке чата
+		for i, uid := range activeRooms[chat.ID] {
+			if uid == userID {
+				// Удаляем пользователя из этого чата
+				activeRooms[chat.ID] = append(activeRooms[chat.ID][:i], activeRooms[chat.ID][i+1:]...)
+				break
+			}
+		}
+		for i, uid := range requestRooms[chat.ID] {
+			if uid == userID {
+				// Удаляем пользователя из этого чата
+				requestRooms[chat.ID] = append(requestRooms[chat.ID][:i], requestRooms[chat.ID][i+1:]...)
+				break
+			}
+		}
+
+		// Если в чате больше нет пользователей, удаляем чат из activeChats
+		if len(activeRooms[chat.ID]) == 0 {
+			delete(activeRooms, chat.ID)
+		}
+		if len(requestRooms[chat.ID]) == 0 {
+			delete(requestRooms, chat.ID)
+		}
+		mu.Unlock()
+	}
+}

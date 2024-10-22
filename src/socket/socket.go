@@ -91,6 +91,7 @@ func DisconnectClient(userID uint, conn *websocket.Conn) {
 	}
 	//отписываемся от чатов
 	unsubscribeChatsNotifications(userID)
+	unsubscribeRooms(userID)
 
 	//удаляем из эктив
 	mu.Lock()

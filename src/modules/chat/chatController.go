@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -372,12 +373,36 @@ func (ac *ChatController) SendMessage(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Sender not found"})
 		return
 	}
+	// получение файла
+	file, err := c.FormFile("file")
+	var fileURL string
+	if err == nil && file != nil {
+		filePath := fmt.Sprintf("uploads/%s", file.Filename)
+		if err := c.SaveUploadedFile(file, filePath); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file"})
+			return
+		}
+		fileURL = filePath
+	}
 
+	// получить изобр если сущ
+	image, err := c.FormFile("image")
+	var imageURL string
+	if err == nil && image != nil {
+		imagePath := fmt.Sprintf("uploads/%s", image.Filename)
+		if err := c.SaveUploadedFile(image, imagePath); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload image"})
+			return
+		}
+		imageURL = imagePath
+	}
 	// Создаем новое сообщение
 	message := models.Messages{
 		Content:  json.Content,
 		SenderID: sender.ID,
 		ChatID:   chat.ID,
+		FileURL:  fileURL,
+		ImageURL: imageURL,
 	}
 
 	// Сохраняем сообщение в базе данных
